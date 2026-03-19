@@ -187,10 +187,6 @@ export function reducer(state: GameState, action: Action): GameState {
       const charger = route?.chargers.find(c => c.id === action.chargerId);
       if (!charger) return state;
       const car = getCar(state.selectedCar);
-      const { batteryBonus: bb } = computeUpgradeStats(state.upgrades);
-      const maxBatChk = car.batteryKwh + bb;
-      // Don't start a charge if battery is already above 99% — prevents loop after auto-charge
-      if (state.battery >= maxBatChk * 0.99) return notify(state, 'Battery already full.');
       const { chargeRateBonus } = computeUpgradeStats(state.upgrades);
       const rateKw = Math.min(charger.maxKw, car.maxChargeKw + chargeRateBonus);
       return {
@@ -304,7 +300,7 @@ export function reducer(state: GameState, action: Action): GameState {
       };
 
       // ── Auto-charge: trigger START_CHARGE when car arrives at queued charger ──
-      if (state.queuedChargerId && !dead && !complete && newBat < maxBat * 0.99) {
+      if (state.queuedChargerId && !dead && !complete) {
         const qc = route?.chargers.find(c => c.id === state.queuedChargerId);
         if (qc && newPos >= qc.positionMi - 0.5 && newPos < qc.positionMi + 1.5 && state.positionMi < qc.positionMi + 1.5) {
           const rateKw = Math.min(qc.maxKw, car.maxChargeKw + chargeRateBonus);
