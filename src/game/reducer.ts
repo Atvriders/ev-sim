@@ -124,7 +124,6 @@ export function reducer(state: GameState, action: Action): GameState {
         return notify(state, `Complete ${route.unlockAfterTrips} trips first.`);
       const car = getCar(state.selectedCar);
       const { batteryBonus } = computeUpgradeStats(state.upgrades);
-      const startLimit = route.terrain[0]?.speedLimitMph ?? 65;
       return notify(
         {
           ...state,
@@ -140,7 +139,7 @@ export function reducer(state: GameState, action: Action): GameState {
           speedMph: 0,
           currentKw: 0,
           currentRoute: route.id,
-          targetSpeedMph: startLimit,
+          targetSpeedMph: 65,
           battery: car.batteryKwh + batteryBonus, // full charge at start
         },
         `Starting ${route.name}!`
@@ -196,17 +195,12 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'STOP_CHARGE': {
-      const resumeRoute = getRoute(state.currentRoute ?? '');
-      const resumeLimit = resumeRoute?.terrain.reduce((lim, pt) => {
-        if (pt.distanceMi <= state.positionMi) return pt.speedLimitMph;
-        return lim;
-      }, 65) ?? 65;
       return {
         ...state,
         isCharging: false,
         chargeRateKw: 0,
         chargingAtId: null,
-        targetSpeedMph: resumeLimit,
+        targetSpeedMph: 65,
       };
     }
 
