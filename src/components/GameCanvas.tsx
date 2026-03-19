@@ -965,6 +965,110 @@ export default function GameCanvas({ state }: Props) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // 2.5 ── TRAIN TRACKS (interstate, country, valley, city)
+    // ════════════════════════════════════════════════════════════════════════
+    if (theme === 'interstate' || theme === 'country' || theme === 'valley' || theme === 'city') {
+      const trackY   = skyH + 16;
+      const trackPar = 0.20;
+
+      // Ballast bed
+      const ballG = ctx.createLinearGradient(0, trackY - 2, 0, trackY + 9);
+      ballG.addColorStop(0, theme === 'city' ? '#484644' : '#7a6e60');
+      ballG.addColorStop(1, theme === 'city' ? '#363432' : '#5a5048');
+      ctx.fillStyle = ballG; ctx.fillRect(0, trackY - 2, W, 11);
+
+      // Rail ties
+      ctx.strokeStyle = theme === 'city' ? '#2e2a28' : '#5a3c20'; ctx.lineWidth = 2;
+      const tieSpacing = 11;
+      for (let t = -1; t < W / tieSpacing + 2; t++) {
+        const tx = ((t * tieSpacing - scrollPx * trackPar) % (W + tieSpacing * 2) + W + tieSpacing * 2) % (W + tieSpacing * 2) - tieSpacing;
+        ctx.beginPath(); ctx.moveTo(tx - 5, trackY); ctx.lineTo(tx + 5, trackY + 7); ctx.stroke();
+      }
+
+      // Two rails
+      ctx.strokeStyle = '#b0b2b8'; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(0, trackY + 1); ctx.lineTo(W, trackY + 1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, trackY + 6); ctx.lineTo(W, trackY + 6); ctx.stroke();
+
+      // Trains — three definitions: two eastbound (slow/fast), one westbound
+      const rngTr = makeRng(seed + 25);
+      const trainDefs = [
+        { par: 0.07, range: W * 5 },   // slow eastbound freight
+        { par: 0.12, range: W * 5 },   // faster eastbound
+        { par: 0.36, range: W * 5 },   // westbound
+      ];
+      for (const { par, range } of trainDefs) {
+        const baseX   = rngTr() * range;                                         // 1
+        const numCars = 4 + Math.floor(rngTr() * 5);                            // 1
+        const ccRoll  = rngTr();                                                 // 1 car colour
+        const eastbound = par < trackPar;
+
+        const rawX   = ((baseX - scrollPx * par) % range + range) % range;
+        const trainX = rawX - W * 0.6;
+
+        const locoW = 26, carW = 20, gap = 2;
+        const totalW = locoW + numCars * (carW + gap);
+        if (trainX > W + 40 || trainX + totalW < -40) continue;
+
+        const ty = trackY - 13;
+        const locoCol = theme === 'city' ? '#304870' : '#5a3020';
+        const carCol  = ccRoll < 0.4
+          ? (theme === 'city' ? '#4a6080' : '#8a5838')
+          : (theme === 'city' ? '#506070' : '#707060');
+
+        // Locomotive body
+        ctx.fillStyle = locoCol;
+        ctx.fillRect(trainX, ty, locoW, 13);
+        // Cab (on leading end)
+        const cabX = eastbound ? trainX + locoW - 9 : trainX;
+        ctx.fillStyle = theme === 'city' ? '#2a4060' : '#3a2010';
+        ctx.fillRect(cabX, ty - 4, 9, 10);
+        // Cab window
+        ctx.fillStyle = 'rgba(160,215,245,0.50)';
+        ctx.fillRect(cabX + 1, ty - 3, 7, 5);
+        // Headlight
+        ctx.fillStyle = 'rgba(255,242,175,0.90)';
+        const hlX = eastbound ? trainX + locoW : trainX;
+        ctx.beginPath(); ctx.arc(hlX, ty + 6, 2.2, 0, Math.PI * 2); ctx.fill();
+        // Smokestack
+        ctx.strokeStyle = '#606870'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(trainX + 7, ty); ctx.lineTo(trainX + 7, ty - 7); ctx.stroke();
+        // Smoke puffs
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = '#c0bfb8';
+        for (let sp = 0; sp < 4; sp++) {
+          const dir = eastbound ? -1 : 1;
+          ctx.beginPath();
+          ctx.arc(trainX + 7 + dir * sp * 4, ty - 7 - sp * 3, 2.5 + sp * 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Freight / passenger cars
+        for (let c = 0; c < numCars; c++) {
+          const cx = trainX + locoW + gap + c * (carW + gap);
+          ctx.fillStyle = carCol;
+          ctx.fillRect(cx, ty + 2, carW, 11);
+          ctx.strokeStyle = 'rgba(0,0,0,0.22)'; ctx.lineWidth = 0.8;
+          ctx.strokeRect(cx + 1, ty + 3, carW - 2, 9);
+          ctx.fillStyle = 'rgba(255,255,255,0.07)';
+          ctx.fillRect(cx + 3, ty + 5, carW - 6, 5);
+        }
+
+        // Wheels
+        ctx.fillStyle = '#282828';
+        const wY = trackY + 1;
+        ctx.beginPath(); ctx.arc(trainX + 5, wY, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(trainX + locoW - 5, wY, 2, 0, Math.PI * 2); ctx.fill();
+        for (let c = 0; c < numCars; c++) {
+          const cx = trainX + locoW + gap + c * (carW + gap);
+          ctx.beginPath(); ctx.arc(cx + 3, wY, 1.8, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx + carW - 3, wY, 1.8, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // 3 ── CLOUDS  (skip desert; sparse alpine)
     // ════════════════════════════════════════════════════════════════════════
     if (theme !== 'desert' && theme !== 'city') {
@@ -1253,6 +1357,36 @@ export default function GameCanvas({ state }: Props) {
     ctx.lineCap = 'butt';
 
     // ════════════════════════════════════════════════════════════════════════
+    // 7.5 ── ROADSIDE GRASS / ROCKS (drawn after road so road covers base)
+    // ════════════════════════════════════════════════════════════════════════
+    if (theme !== 'coastal') {
+      const rsStep = theme === 'desert' ? 5 : 3;
+      for (let s = 1; s < STEPS - 1; s += rsStep) {
+        const mi = visStart + s * stepMi;
+        const x  = miToX(mi);
+        if (x < 2 || x > W - 2) continue;
+        const y  = elToY(elevAt(mi));
+        const v  = Math.abs(Math.sin(s * 1.7 + seed * 0.001));   // deterministic variation
+        if (theme === 'desert') {
+          ctx.fillStyle = `rgba(145,88,45,${0.28 + v * 0.22})`;
+          ctx.beginPath(); ctx.ellipse(x, y + 21, 2.5 + v * 2.5, 1.3, 0, 0, Math.PI * 2); ctx.fill();
+        } else if (theme === 'alpine') {
+          ctx.fillStyle = `rgba(108,104,88,${0.32 + v * 0.20})`;
+          ctx.fillRect(x - 1, y + 19, 3 + Math.floor(v * 4), 2);
+        } else {
+          const gc = theme === 'city' ? `rgba(52,74,42,0.48)` : `rgba(65,122,46,0.52)`;
+          ctx.strokeStyle = gc; ctx.lineWidth = 1.1;
+          const h = 4 + v * 5;
+          ctx.beginPath(); ctx.moveTo(x - 1, y + 20); ctx.lineTo(x - 2 - v, y + 20 - h); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x + 1, y + 20); ctx.lineTo(x + 2 + v * 0.5, y + 20 - h * 0.85); ctx.stroke();
+          if (v > 0.62) {
+            ctx.beginPath(); ctx.moveTo(x, y + 20); ctx.lineTo(x + v * 3, y + 20 - h * 0.70); ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // 8 ── CHARGER STATIONS
     // ════════════════════════════════════════════════════════════════════════
     for (const charger of route.chargers) {
@@ -1260,6 +1394,60 @@ export default function GameCanvas({ state }: Props) {
       if (cx2 < -30 || cx2 > W + 30) continue;
       const roadY = elToY(elevAt(charger.positionMi));
       const isActive = state.chargingAtId === charger.id;
+
+      // ── Background building / canopy behind charger ───────────────────
+      const isDCFC = charger.maxKw >= 50;
+      if (isDCFC) {
+        // DC fast charger: modern charging plaza canopy + small building
+        const bldX = cx2 + 16, bldY = roadY - 48;
+        // Canopy
+        ctx.fillStyle = '#1e2838';
+        ctx.fillRect(bldX - 20, bldY + 8, 40, 5);
+        ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 0.8;
+        ctx.strokeRect(bldX - 20, bldY + 8, 40, 5);
+        // Canopy support poles
+        ctx.strokeStyle = '#607080'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(bldX - 14, bldY + 13); ctx.lineTo(bldX - 14, roadY - 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bldX + 14, bldY + 13); ctx.lineTo(bldX + 14, roadY - 2); ctx.stroke();
+        // Small service building
+        ctx.fillStyle = '#222a38';
+        ctx.fillRect(bldX + 22, roadY - 34, 22, 34);
+        ctx.fillStyle = '#1a2230';
+        ctx.fillRect(bldX + 20, roadY - 37, 26, 4);
+        // Building windows
+        ctx.fillStyle = isActive ? 'rgba(63,185,80,0.55)' : 'rgba(88,166,255,0.40)';
+        ctx.fillRect(bldX + 25, roadY - 28, 6, 5);
+        ctx.fillRect(bldX + 33, roadY - 28, 6, 5);
+        ctx.fillRect(bldX + 25, roadY - 18, 6, 5);
+        ctx.fillRect(bldX + 33, roadY - 18, 6, 5);
+        // Sign
+        ctx.fillStyle = isActive ? '#3fb950' : '#58a6ff';
+        ctx.font = 'bold 6px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('EV⚡', bldX + 33, roadY - 6);
+      } else {
+        // Level 1/2 charger: gas-station-style canopy
+        const bldX = cx2 + 14;
+        // Canopy roof
+        ctx.fillStyle = '#28303a';
+        ctx.fillRect(bldX - 18, roadY - 46, 36, 6);
+        ctx.strokeStyle = '#d29922'; ctx.lineWidth = 0.8;
+        ctx.strokeRect(bldX - 18, roadY - 46, 36, 6);
+        // Canopy post
+        ctx.strokeStyle = '#505868'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(bldX, roadY - 40); ctx.lineTo(bldX, roadY - 2); ctx.stroke();
+        // Small store/booth beside
+        ctx.fillStyle = '#1e2830';
+        ctx.fillRect(bldX + 20, roadY - 32, 18, 32);
+        ctx.fillStyle = '#18202a';
+        ctx.fillRect(bldX + 18, roadY - 35, 22, 4);
+        // Door
+        ctx.fillStyle = '#0a1018';
+        ctx.fillRect(bldX + 25, roadY - 12, 7, 12);
+        // Window
+        ctx.fillStyle = 'rgba(160,200,240,0.35)';
+        ctx.fillRect(bldX + 22, roadY - 28, 8, 7);
+      }
+
       const stationY = roadY - 36;
       ctx.strokeStyle = '#606870'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(cx2, roadY - 2); ctx.lineTo(cx2, stationY + 20); ctx.stroke();
