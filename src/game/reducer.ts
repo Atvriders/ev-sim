@@ -235,7 +235,6 @@ export function reducer(state: GameState, action: Action): GameState {
 
       if (complete && !dead) {
         const reward = route.reward;
-        const distKwh = state.totalKwhUsed;
         const log = {
           routeName: route.name,
           carName: `${car.brand} ${car.name}`,

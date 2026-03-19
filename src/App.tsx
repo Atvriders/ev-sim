@@ -20,7 +20,6 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const rafRef  = useRef<number | null>(null);
   const lastRef = useRef<number>(0);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Game loop
   useEffect(() => {
