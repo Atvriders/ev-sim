@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { GameState } from '../game/types';
 import { getRoute } from '../game/routes';
 import { getCar } from '../game/cars';
+import { computeUpgradeStats } from '../game/physics';
 
 interface Props { state: GameState; }
 
@@ -2239,6 +2240,62 @@ export default function GameCanvas({ state }: Props) {
     }
     drawCarByStyle(ctx, state.selectedCar, car.color, wheelAngle);
     ctx.restore();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 9.1 ── REGEN OVERCHARGE SPARKS (regen active + battery >= 100%)
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      const { batteryBonus } = computeUpgradeStats(state.upgrades);
+      const maxBat = car.batteryKwh + batteryBonus;
+      if (state.currentKw < -0.5 && state.battery >= maxBat - 0.05) {
+        // Rear of car is at x ≈ carScreenX - 31 in world space
+        const rearX = carScreenX - 31;
+        const rearY = carY + 17;
+        ctx.save();
+        ctx.translate(rearX, rearY);
+        ctx.rotate(-tilt);
+
+        // Rear glow burst
+        const pulse = 0.55 + 0.45 * Math.sin(T * 0.006);
+        const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, 28);
+        rg.addColorStop(0,   `rgba(255,220,60,${0.75 * pulse})`);
+        rg.addColorStop(0.35,`rgba(255,120,0,${0.45 * pulse})`);
+        rg.addColorStop(1,    'rgba(255,60,0,0)');
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill();
+
+        // Spark streaks shooting rearward
+        const SPARK_COUNT = 14;
+        for (let s = 0; s < SPARK_COUNT; s++) {
+          const phase     = T * 0.009 + s * 0.71;
+          const intensity = Math.abs(Math.sin(phase));
+          if (intensity < 0.18) continue;           // natural flicker
+
+          // Angle spread: centred on leftward (-π), fan ±70°
+          const angle = -Math.PI + (s / SPARK_COUNT - 0.5) * 2.4
+                        + Math.sin(T * 0.011 + s * 1.4) * 0.25;
+          const len   = (10 + 22 * intensity) * (0.7 + 0.3 * Math.sin(T * 0.015 + s));
+
+          const ex = Math.cos(angle) * len;
+          const ey = Math.sin(angle) * len;
+
+          ctx.globalAlpha = intensity * 0.90;
+          // Alternate colours: white core, orange, yellow
+          ctx.strokeStyle = s % 3 === 0 ? '#ffffff' : s % 3 === 1 ? '#ffcc44' : '#ff8822';
+          ctx.lineWidth   = 1.0 + intensity * 1.4;
+          ctx.lineCap     = 'round';
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ex, ey); ctx.stroke();
+
+          // Bright dot at spark tip
+          ctx.fillStyle = s % 2 === 0 ? '#ffe060' : '#ffffff';
+          ctx.globalAlpha = intensity * 0.70;
+          ctx.beginPath(); ctx.arc(ex, ey, 1.4 + intensity, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        ctx.lineCap = 'butt';
+        ctx.restore();
+      }
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // 9.2 ── WEATHER  (drawn in front of cars so precipitation is foreground)
