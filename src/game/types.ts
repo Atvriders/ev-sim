@@ -17,7 +17,8 @@ export interface CarModel {
 export type UpgradeId =
   | 'aero_kit' | 'lightweight_wheels' | 'thermal_mgmt'
   | 'regen_boost' | 'battery_plus' | 'eco_chip'
-  | 'solar_roof' | 'heat_pump' | 'performance_tires' | 'sport_tune';
+  | 'solar_roof' | 'heat_pump' | 'performance_tires' | 'sport_tune'
+  | 'route_planner';
 
 export interface Upgrade {
   id: UpgradeId;

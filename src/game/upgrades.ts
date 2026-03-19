@@ -101,6 +101,16 @@ export const UPGRADES: Upgrade[] = [
     batteryBonus: 0,
     freeKw: 0,
   },
+  {
+    id: 'route_planner',
+    name: 'DC Fast Charge Planner',
+    desc: 'Onboard nav pre-calculates every DC fast charger on your route. Shows estimated battery % on arrival at each stop and flags any gaps your current charge won\'t cover.',
+    price: 1100,
+    efficiencyBonus: 0,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
 ];
 
 export const UPGRADE_MAP: Record<UpgradeId, Upgrade> = Object.fromEntries(
