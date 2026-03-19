@@ -189,6 +189,7 @@ export function reducer(state: GameState, action: Action): GameState {
         isCharging: true,
         chargingAtId: charger.id,
         chargeRateKw: rateKw,
+        queuedChargerId: null,   // clear queue so arrival check never re-fires
         paused: false,
         speedMph: 0,
         targetSpeedMph: 0,
@@ -238,6 +239,7 @@ export function reducer(state: GameState, action: Action): GameState {
               isCharging: false,
               chargeRateKw: 0,
               chargingAtId: null,
+              queuedChargerId: null,  // ensure no stale queue triggers re-charge
               targetSpeedMph: resumeLimit,
             },
             'Fully charged! Resuming drive.'

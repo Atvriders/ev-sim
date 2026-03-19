@@ -1278,12 +1278,78 @@ export default function GameCanvas({ state }: Props) {
     // 7 ── ROAD  (drawn AFTER vegetation)
     // ════════════════════════════════════════════════════════════════════════
     ctx.lineCap = 'butt';
-    // Ground backing strip (wider fill under entire road, prevents sky/bg bleed at slopes)
+    // Ground cross-section strata (topsoil → clay → bedrock), clipped to below-terrain region
     {
-      const groundColor = theme === 'desert' ? '#6a3810' : theme === 'city' ? '#252520' : '#283420';
+      ctx.save();
+      ctx.beginPath();
       terrainPath(0);
       ctx.lineTo(miToX(visEnd), H); ctx.lineTo(miToX(visStart), H); ctx.closePath();
-      ctx.fillStyle = groundColor; ctx.fill();
+      ctx.clip();
+
+      // Theme-tuned stratum colours  [topsoil, clay, bedrock]
+      const [topsoilC, clayC, rockC] =
+        theme === 'desert'   ? ['#7a4018', '#552a0e', '#3a1c08'] :
+        theme === 'city'     ? ['#28281e', '#1e1e16', '#141410'] :
+        theme === 'mountain' ? ['#2c2818', '#20180e', '#16140a'] :
+        theme === 'alpine'   ? ['#282a18', '#1c200c', '#12160a'] :
+        theme === 'coastal'  ? ['#2a3028', '#1e2416', '#12180a'] :
+                               ['#323820', '#262010', '#18160a'];
+
+      // Gradient fill (topsoil near surface, bedrock at bottom)
+      const gndG = ctx.createLinearGradient(0, groundBot, 0, H);
+      gndG.addColorStop(0,    topsoilC);
+      gndG.addColorStop(0.45, clayC);
+      gndG.addColorStop(1,    rockC);
+      ctx.fillStyle = gndG;
+      ctx.fillRect(0, 0, W, H);
+
+      // Wavy strata horizon lines (scroll gently with the world)
+      const stOff = (scrollPx * 0.08) % 200;
+      const strataFracs  = [0.25, 0.52, 0.76];
+      const strataGlows  = ['rgba(255,245,200,0.08)', 'rgba(255,230,170,0.06)', 'rgba(220,200,140,0.04)'];
+      ctx.lineWidth = 1.5;
+      for (let li = 0; li < strataFracs.length; li++) {
+        const baseY = groundBot + strataFracs[li] * (H - groundBot);
+        ctx.strokeStyle = strataGlows[li];
+        ctx.beginPath();
+        for (let x = 0; x <= W + 4; x += 3) {
+          const wy = baseY
+            + Math.sin((x + stOff) * 0.048 + li * 1.9 + seed * 0.02) * 3.5
+            + Math.sin((x + stOff) * 0.016 + li * 0.8) * 5.5;
+          x === 0 ? ctx.moveTo(x, wy) : ctx.lineTo(x, wy);
+        }
+        ctx.stroke();
+        // Thin shadow band below each horizon to separate layers
+        ctx.fillStyle = 'rgba(0,0,0,0.14)';
+        ctx.fillRect(0, baseY + 1.5, W, 4);
+      }
+
+      // Embedded rocks / pebbles (world-space so they scroll with the road)
+      const rngRock = makeRng(seed + 0xb00b);
+      for (let i = 0; i < 110; i++) {
+        const rmi   = rngRock() * (distTotal + 4) - 2;
+        const depth = 0.04 + rngRock() * 0.90;   // 0 = near surface, 1 = deep
+        const rw    = 1.5 + rngRock() * 8.5;
+        const rh    = rw * (0.38 + rngRock() * 0.62);
+        const br    = Math.floor(10 + rngRock() * 30);
+        const angle = rngRock() * Math.PI;
+        const rx    = miToX(rmi);
+        if (rx < -rw - 2 || rx > W + rw + 2) continue;
+        const surfY = elToY(elevAt(rmi));
+        const ry    = surfY + depth * (H - surfY);
+        // Rock body
+        ctx.fillStyle = `rgba(${br},${br},${Math.max(0,br-3)},0.58)`;
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, rw, rh, angle, 0, Math.PI * 2);
+        ctx.fill();
+        // Highlight fleck
+        ctx.fillStyle = `rgba(${br+18},${br+14},${br+8},0.28)`;
+        ctx.beginPath();
+        ctx.ellipse(rx - rw * 0.22, ry - rh * 0.28, rw * 0.42, rh * 0.34, angle, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
     }
     // Gravel/dirt shoulder (widest layer)
     terrainPath(0); ctx.strokeStyle = theme === 'desert' ? '#6a4420' : theme === 'city' ? '#383830' : '#3a3828'; ctx.lineWidth = 36; ctx.stroke();
