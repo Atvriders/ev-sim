@@ -264,18 +264,22 @@ export function reducer(state: GameState, action: Action): GameState {
         return lim;
       }, 65);
       const hasAdaptiveCruise = state.upgrades.includes('adaptive_cruise');
-      // Adaptive Cruise: auto-set target to current speed limit each tick
+      // Adaptive Cruise drives at the limit; otherwise user can go as fast as they want
       const userTarget = hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph;
-      const effectiveTarget = Math.min(userTarget, currentSpeedLimit);
       const updates  = physicsTick(
-        { ...state, targetSpeedMph: effectiveTarget },
+        { ...state, targetSpeedMph: userTarget },
         car, route?.terrain ?? [], upgrades, deltaS
       );
 
       const newPos    = updates.positionMi ?? state.positionMi;
       const newBat    = updates.battery ?? state.battery;
+      const newSpeed  = updates.speedMph ?? state.speedMph;
       const dead      = newBat <= 0;
       const complete  = newPos >= route.distanceMi;
+
+      // ── Speeding fine: >5 mph over limit costs credits each tick ─────────────
+      const speedExcess = Math.max(0, newSpeed - currentSpeedLimit - 5);
+      const fine = speedExcess * 0.015 * deltaS; // ~$0.015 per excess-mph per game-second
 
       let next: GameState = {
         ...state,
@@ -284,6 +288,7 @@ export function reducer(state: GameState, action: Action): GameState {
         targetSpeedMph: hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph,
         batteryDead: dead,
         routeComplete: complete && !dead,
+        credits: fine > 0 ? Math.max(0, (updates.credits ?? state.credits) - fine) : (updates.credits ?? state.credits),
       };
 
       // ── Auto-charge: trigger START_CHARGE when car arrives at queued charger ──

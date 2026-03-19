@@ -272,24 +272,32 @@ export default function DriveTab({ state, dispatch }: Props) {
       {state.driving && (
         <div className="controls">
           {/* Speed slider */}
-          {!state.isCharging && (
-            <div className="speed-control">
-              <span className="speed-label" title={hasAdaptiveCruise ? 'Adaptive Cruise active' : undefined}
-                style={{ color: hasAdaptiveCruise ? '#58a6ff' : undefined }}>
-                {hasAdaptiveCruise ? 'ACC' : 'Target'}
-              </span>
-              <input
-                type="range"
-                min={20}
-                max={speedLimit}
-                step={5}
-                disabled={hasAdaptiveCruise}
-                value={Math.min(state.targetSpeedMph, speedLimit)}
-                onChange={e => dispatch({ type: 'SET_TARGET_SPEED', mph: +e.target.value })}
-              />
-              <span className="speed-val">{Math.min(state.targetSpeedMph, speedLimit)} mph</span>
-            </div>
-          )}
+          {!state.isCharging && (() => {
+            const overLimit = state.targetSpeedMph > speedLimit + 5;
+            const inTolerance = state.targetSpeedMph > speedLimit && state.targetSpeedMph <= speedLimit + 5;
+            return (
+              <div className="speed-control">
+                <span className="speed-label" title={hasAdaptiveCruise ? 'Adaptive Cruise active' : undefined}
+                  style={{ color: hasAdaptiveCruise ? '#58a6ff' : overLimit ? '#f85149' : inTolerance ? '#d29922' : undefined }}>
+                  {hasAdaptiveCruise ? 'ACC' : 'Target'}
+                </span>
+                <input
+                  type="range"
+                  min={20}
+                  max={speedLimit + 30}
+                  step={5}
+                  disabled={hasAdaptiveCruise}
+                  value={state.targetSpeedMph}
+                  onChange={e => dispatch({ type: 'SET_TARGET_SPEED', mph: +e.target.value })}
+                />
+                <span className="speed-val" style={{ color: overLimit ? '#f85149' : inTolerance ? '#d29922' : undefined }}>
+                  {state.targetSpeedMph} mph
+                  {overLimit && <span style={{ fontSize: 10, marginLeft: 4 }}>🚨 fine</span>}
+                  {inTolerance && <span style={{ fontSize: 10, marginLeft: 4, color: '#d29922' }}>⚠️ +5</span>}
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Time scale */}
           <div className="timescale-btns">
