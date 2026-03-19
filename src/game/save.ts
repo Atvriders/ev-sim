@@ -1,6 +1,6 @@
 import type { GameState } from './types';
 
-const KEY = 'ev_sim_save_v1';
+const KEY = 'ev_sim_save_v2';
 
 export function saveGame(state: GameState): void {
   try {

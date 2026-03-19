@@ -13,14 +13,14 @@ function buildInitialState(): GameState {
     credits: 500,
     totalTrips: 0,
 
-    selectedCar: 'tesla_m3_rwd',
-    ownedCars: ['tesla_m3_rwd'],
+    selectedCar: 'nissan_leaf_2011',
+    ownedCars: ['nissan_leaf_2011'],
     upgrades: [],
 
     driving: false,
     paused: false,
     timeScale: 1,
-    battery: getCar('tesla_m3_rwd').batteryKwh,
+    battery: getCar('nissan_leaf_2011').batteryKwh,
     speedMph: 0,
     targetSpeedMph: 65,
     positionMi: 0,
