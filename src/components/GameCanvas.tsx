@@ -349,8 +349,8 @@ export default function GameCanvas({ state }: Props) {
     const minEl    = Math.min(...elevs);
     const maxEl    = Math.max(...elevs);
     const elRange  = Math.max(maxEl - minEl, 100);
-    const skyH     = H * 0.62;
-    const groundBot = H * 0.80;
+    const skyH     = H * 0.72;
+    const groundBot = H * 0.90;
 
     function elToY(el: number) {
       return skyH + (1 - (el - minEl) / elRange) * (groundBot - skyH);
