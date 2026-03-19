@@ -289,45 +289,71 @@ export default function GameCanvas({ state }: Props) {
       }
     }
 
-    const carY = elToY(carEl) - 10;
-    const tilt = Math.atan(grade) * 0.6;
+    // Wheel radius in px; car body sits so wheel bottoms touch the road
+    const WHEEL_R = 5;
+    // carY = road surface Y; the car is drawn with wheels centered at (wx, 0)
+    // so wheel bottom = carY + WHEEL_R → sits on road
+    const carY = elToY(carEl);
+    const tilt  = Math.atan(grade) * 0.6;
+
+    // Wheel rotation angle based on miles driven (wheel circumference ≈ 1 ft radius in game)
+    const wheelAngle = (state.positionMi * 5280 / (2 * Math.PI)) % (Math.PI * 2);
 
     ctx.save();
     ctx.translate(carScreenX, carY);
     ctx.rotate(-tilt);
 
-    // Body
-    ctx.fillStyle = car.color;
-    ctx.beginPath();
-    ctx.roundRect(-18, -10, 36, 10, 3);
-    ctx.fill();
-
-    // Cabin / roof
-    ctx.fillStyle = '#88ccff44';
-    ctx.beginPath();
-    ctx.roundRect(-10, -18, 20, 8, 2);
-    ctx.fill();
-
-    // Wheels
-    ctx.fillStyle = '#222';
-    for (const wx of [-10, 10]) {
-      ctx.beginPath();
-      ctx.arc(wx, 1, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    // Regen glow
+    // Regen glow on ground
     if (state.currentKw < -0.5) {
       ctx.shadowColor = '#3fb950';
       ctx.shadowBlur  = 14;
-      ctx.fillStyle   = '#3fb95035';
+      ctx.fillStyle   = '#3fb95030';
       ctx.beginPath();
-      ctx.ellipse(0, 2, 22, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 24, 5, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
+    }
+
+    // Car body — sits above wheel centers
+    const bodyY = -WHEEL_R - 10; // bottom of body at wheel center height
+    ctx.fillStyle = car.color;
+    ctx.beginPath();
+    ctx.roundRect(-18, bodyY, 36, 10, 3);
+    ctx.fill();
+
+    // Cabin / windshield
+    ctx.fillStyle = '#88ccff55';
+    ctx.beginPath();
+    ctx.roundRect(-10, bodyY - 8, 20, 8, 2);
+    ctx.fill();
+
+    // Wheels with rotating spokes
+    for (const wx of [-11, 11]) {
+      // Tyre
+      ctx.beginPath();
+      ctx.arc(wx, -WHEEL_R, WHEEL_R, 0, Math.PI * 2);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Hub
+      ctx.beginPath();
+      ctx.arc(wx, -WHEEL_R, WHEEL_R * 0.38, 0, Math.PI * 2);
+      ctx.fillStyle = '#888';
+      ctx.fill();
+
+      // Spokes (3 spokes, rotate with distance)
+      ctx.strokeStyle = '#aaa';
+      ctx.lineWidth = 1;
+      for (let s = 0; s < 3; s++) {
+        const a = wheelAngle + (s * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.moveTo(wx, -WHEEL_R);
+        ctx.lineTo(wx + Math.cos(a) * WHEEL_R * 0.85, -WHEEL_R + Math.sin(a) * WHEEL_R * 0.85);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
