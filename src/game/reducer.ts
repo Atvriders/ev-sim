@@ -333,7 +333,7 @@ export function reducer(state: GameState, action: Action): GameState {
         const nextDCFC = route?.chargers
           // +0.6 keeps charger outside the auto-charge near-trigger window (0.5 mi before charger),
           // preventing immediate re-queue of the charger the car just finished charging at
-          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.6 && c.id !== skipped)
+          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1 && c.id !== skipped)
           .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null;
         const targetId = nextDCFC?.id ?? null;
         if (next.queuedChargerId !== targetId) {

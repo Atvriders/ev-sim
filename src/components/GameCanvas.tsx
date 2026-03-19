@@ -1728,7 +1728,6 @@ export default function GameCanvas({ state }: Props) {
         const lane   = laneR < 0.5 ? 6 : 17;  // right inner or outer lane Y offset
         const sx     = ((baseX - scrollPx * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
-        if (Math.abs(sx - carScreenX) < 55) continue; // don't overlap player
         const approxMi = offsetMi + sx * MI_PER_PX;
         const ty = elToY(elevAt(approxMi)) + lane;
         ctx.save();
@@ -1748,7 +1747,7 @@ export default function GameCanvas({ state }: Props) {
         const colIdx = Math.floor(rngOnc() * TC_COLS.length);   // 4
         const lane   = laneR < 0.5 ? -6 : -17; // left inner or outer lane Y offset
         // +scrollPx makes them scroll rightward in screen (coming from right)
-        const sx = ((baseX + scrollPx * 1.08) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        const sx = ((baseX - scrollPx * 2.0) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
         const approxMi = offsetMi + sx * MI_PER_PX;
         const ty = elToY(elevAt(approxMi)) + lane;
