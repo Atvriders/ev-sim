@@ -102,6 +102,16 @@ export const UPGRADES: Upgrade[] = [
     freeKw: 0,
   },
   {
+    id: 'autopilot',
+    name: 'Autopilot Module',
+    desc: 'Advanced driver-assist lets the car handle long highway stretches autonomously. Unlocks 50× and 100× simulation speed.',
+    price: 2200,
+    efficiencyBonus: 0,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
     id: 'route_planner',
     name: 'DC Fast Charge Planner',
     desc: 'Onboard nav pre-calculates every DC fast charger on your route. Shows estimated battery % on arrival at each stop and flags any gaps your current charge won\'t cover.',

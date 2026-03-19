@@ -52,7 +52,8 @@ export default function DriveTab({ state, dispatch }: Props) {
   const { batteryBonus } = computeUpgradeStats(state.upgrades);
   const maxBat  = car.batteryKwh + batteryBonus;
   const batPct  = maxBat > 0 ? state.battery / maxBat : 0;
-  const hasPlanner = state.upgrades.includes('route_planner');
+  const hasPlanner   = state.upgrades.includes('route_planner');
+  const hasAutopilot = state.upgrades.includes('autopilot');
 
   // Speed limit at current position
   const speedLimit = route
@@ -186,15 +187,20 @@ export default function DriveTab({ state, dispatch }: Props) {
 
           {/* Time scale */}
           <div className="timescale-btns">
-            {([1, 5, 10, 25, 50, 100] as const).map(s => (
-              <button
-                key={s}
-                className={`ts-btn ${state.timeScale === s ? 'active' : ''}`}
-                onClick={() => dispatch({ type: 'SET_TIME_SCALE', scale: s })}
-              >
-                {s}×
-              </button>
-            ))}
+            {([1, 5, 10, 25, 50, 100] as const).map(s => {
+              const locked = s > 25 && !hasAutopilot;
+              return (
+                <button
+                  key={s}
+                  className={`ts-btn ${state.timeScale === s ? 'active' : ''}`}
+                  disabled={locked}
+                  title={locked ? 'Requires Autopilot Module upgrade' : undefined}
+                  onClick={() => dispatch({ type: 'SET_TIME_SCALE', scale: s })}
+                >
+                  {locked ? '🔒' : `${s}×`}
+                </button>
+              );
+            })}
           </div>
 
           {/* Pause / Abandon */}
