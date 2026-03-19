@@ -279,7 +279,10 @@ const GROUND: Record<SceneTheme, [string,string]> = {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function GameCanvas({ state }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef        = useRef<HTMLCanvasElement>(null);
+  const trafficScrollRef = useRef<number>(0);
+  const lastScrollPxRef  = useRef<number>(0);
+  const lastTimeRef      = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -319,6 +322,23 @@ export default function GameCanvas({ state }: Props) {
     const carScreenX = W * 0.28;
     const offsetMi   = state.positionMi - carScreenX * MI_PER_PX;
     const scrollPx   = state.positionMi / MI_PER_PX;
+    const T          = performance.now();
+
+    // ── Continuous traffic scroll (keeps moving during charging) ─────────────
+    {
+      const dtMs  = lastTimeRef.current ? T - lastTimeRef.current : 16;
+      lastTimeRef.current = T;
+      const delta = scrollPx - lastScrollPxRef.current;
+      lastScrollPxRef.current = scrollPx;
+      if (delta < -100) {
+        trafficScrollRef.current = scrollPx;                     // new drive reset
+      } else if (state.isCharging) {
+        trafficScrollRef.current += (28 / 3600 / MI_PER_PX) * (dtMs / 1000); // ~28 mph
+      } else {
+        trafficScrollRef.current += delta;
+      }
+    }
+    const trafficScroll = trafficScrollRef.current;
 
     function miToX(mi: number) { return (mi - offsetMi) / MI_PER_PX; }
 
@@ -408,6 +428,193 @@ export default function GameCanvas({ state }: Props) {
         ctx.beginPath(); ctx.arc(sx2, sy2, 0.5 + rngSt() * 0.8, 0, Math.PI*2); ctx.fill();
       }
       ctx.globalAlpha = 1;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 1.5 ── AIR TRAFFIC (planes, helicopters, UFOs)
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      // ── Planes ────────────────────────────────────────────────────────────
+      const rngAir = makeRng(seed + 0xcc1133);
+      const planeCount = 4;
+      for (let i = 0; i < planeCount; i++) {
+        const baseX   = rngAir() * W * 9;                       // 1 spawn spread
+        const baseY   = 8 + rngAir() * (skyH * 0.72);           // 2 sky height
+        const spd     = 0.018 + rngAir() * 0.028;               // 3 px/ms
+        const goRight = rngAir() < 0.55;                         // 4 direction
+        const sc      = 0.65 + rngAir() * 0.55;                  // 5 size
+
+        const rawX = (baseX + T * spd) % (W * 9);
+        const sx   = goRight ? rawX - W * 0.5 : W - rawX + W * 0.5;
+        if (sx < -80 || sx > W + 80) continue;
+
+        const sy = baseY;
+        ctx.save();
+        ctx.translate(sx, sy);
+        if (!goRight) ctx.scale(-1, 1);
+
+        // contrail
+        ctx.globalAlpha = 0.14;
+        const cg = ctx.createLinearGradient(-65 * sc, 0, 0, 0);
+        cg.addColorStop(0, 'rgba(255,255,255,0)');
+        cg.addColorStop(1, 'rgba(255,255,255,0.75)');
+        ctx.fillStyle = cg;
+        ctx.fillRect(-65 * sc, -1.2 * sc, 65 * sc, 2.5 * sc);
+        ctx.globalAlpha = 1;
+
+        // fuselage
+        ctx.fillStyle = '#ccd6e8';
+        ctx.beginPath(); ctx.ellipse(0, 0, 19 * sc, 3.5 * sc, 0, 0, Math.PI * 2); ctx.fill();
+        // nose taper
+        ctx.fillStyle = '#dde4f0';
+        ctx.beginPath(); ctx.ellipse(14 * sc, 0, 7 * sc, 2.8 * sc, 0, 0, Math.PI * 2); ctx.fill();
+        // wings
+        ctx.fillStyle = '#b0bcd0';
+        ctx.beginPath();
+        ctx.moveTo(-2 * sc, 0); ctx.lineTo(4 * sc, -13 * sc);
+        ctx.lineTo(9 * sc, -13 * sc); ctx.lineTo(9 * sc, 0); ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-2 * sc, 0); ctx.lineTo(4 * sc, 13 * sc);
+        ctx.lineTo(9 * sc, 13 * sc); ctx.lineTo(9 * sc, 0); ctx.closePath();
+        ctx.fill();
+        // tail fin
+        ctx.beginPath();
+        ctx.moveTo(-16 * sc, 0); ctx.lineTo(-13 * sc, -8 * sc);
+        ctx.lineTo(-8 * sc, 0); ctx.closePath();
+        ctx.fill();
+        // tail horizontal stabilizers
+        ctx.beginPath();
+        ctx.moveTo(-15 * sc, 0); ctx.lineTo(-11 * sc, -5 * sc);
+        ctx.lineTo(-7 * sc, -5 * sc); ctx.lineTo(-7 * sc, 0); ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(-15 * sc, 0); ctx.lineTo(-11 * sc, 5 * sc);
+        ctx.lineTo(-7 * sc, 5 * sc); ctx.lineTo(-7 * sc, 0); ctx.closePath();
+        ctx.fill();
+        // engine pods
+        ctx.fillStyle = '#9aaabb';
+        ctx.beginPath(); ctx.ellipse(3 * sc, -11 * sc, 5.5 * sc, 2 * sc, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(3 * sc,  11 * sc, 5.5 * sc, 2 * sc, 0, 0, Math.PI * 2); ctx.fill();
+        // windows
+        ctx.fillStyle = 'rgba(180,220,255,0.80)';
+        for (let w = 0; w < 5; w++) {
+          ctx.beginPath(); ctx.ellipse((-7 + w * 5) * sc, -1 * sc, 1.6 * sc, 1.3 * sc, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // ── Helicopter ────────────────────────────────────────────────────────
+      const rngHeli = makeRng(seed + 0xdd2244);
+      {
+        const baseX   = rngHeli() * W * 7;
+        const baseY   = 15 + rngHeli() * (skyH * 0.55);
+        const spd     = 0.009 + rngHeli() * 0.008;
+        const goRight = rngHeli() < 0.5;
+        const rawX    = (baseX + T * spd) % (W * 7);
+        const sx      = goRight ? rawX - W * 0.4 : W - rawX + W * 0.4;
+        if (sx >= -60 && sx <= W + 60) {
+          const sy    = baseY + Math.sin(T * 0.0012) * 3;
+          const sc    = 0.9;
+          const rotorA = (T * 0.012) % (Math.PI * 2); // fast rotor spin
+          ctx.save();
+          ctx.translate(sx, sy);
+          if (!goRight) ctx.scale(-1, 1);
+          // body
+          ctx.fillStyle = '#8899aa';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 14 * sc, 5.5 * sc, 0, 0, Math.PI * 2); ctx.fill();
+          // cockpit bubble
+          ctx.fillStyle = '#aaddff';
+          ctx.beginPath();
+          ctx.ellipse(8 * sc, -1 * sc, 7 * sc, 4.5 * sc, -0.15, 0, Math.PI * 2); ctx.fill();
+          // tail boom
+          ctx.strokeStyle = '#7a8899'; ctx.lineWidth = 2 * sc;
+          ctx.beginPath(); ctx.moveTo(-14 * sc, 0); ctx.lineTo(-28 * sc, -2 * sc); ctx.stroke();
+          // tail rotor
+          ctx.strokeStyle = 'rgba(150,170,190,0.6)'; ctx.lineWidth = 1 * sc;
+          ctx.save(); ctx.translate(-27 * sc, -2 * sc); ctx.rotate(rotorA * 3);
+          for (let r = 0; r < 3; r++) {
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 5 * sc); ctx.stroke();
+            ctx.rotate(Math.PI * 2 / 3);
+          }
+          ctx.restore();
+          // main rotor shaft
+          ctx.strokeStyle = '#6a7a88'; ctx.lineWidth = 1.5 * sc;
+          ctx.beginPath(); ctx.moveTo(0, -5.5 * sc); ctx.lineTo(0, -9 * sc); ctx.stroke();
+          // main rotor blades
+          ctx.strokeStyle = 'rgba(120,140,160,0.55)'; ctx.lineWidth = 2.5 * sc;
+          ctx.save(); ctx.translate(0, -9 * sc); ctx.rotate(rotorA);
+          ctx.beginPath(); ctx.moveTo(-20 * sc, 0); ctx.lineTo(20 * sc, 0); ctx.stroke();
+          ctx.rotate(Math.PI / 2);
+          ctx.beginPath(); ctx.moveTo(-20 * sc, 0); ctx.lineTo(20 * sc, 0); ctx.stroke();
+          ctx.restore();
+          // skids
+          ctx.strokeStyle = '#6a7a88'; ctx.lineWidth = 1 * sc;
+          ctx.beginPath(); ctx.moveTo(-8 * sc, 5.5 * sc); ctx.lineTo(10 * sc, 5.5 * sc); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(-8 * sc, 5.5 * sc); ctx.lineTo(-5 * sc, 0); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(8 * sc, 5.5 * sc); ctx.lineTo(6 * sc, 0); ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // ── UFO ───────────────────────────────────────────────────────────────
+      const rngUFO = makeRng(seed + 0xee3355);
+      {
+        const baseX  = rngUFO() * W * 6;
+        const baseY  = 12 + rngUFO() * (skyH * 0.45);
+        const spd    = 0.003 + rngUFO() * 0.004;    // very slow drift
+        const rawX   = (baseX + T * spd) % (W * 6);
+        const sx     = rawX - W * 0.3;
+        if (sx >= -80 && sx <= W + 80) {
+          const sy    = baseY + Math.sin(T * 0.0008) * 5 + Math.sin(T * 0.0015) * 3;
+          const pulse = 0.7 + 0.3 * Math.sin(T * 0.002);
+          ctx.save();
+          ctx.translate(sx, sy);
+          // glow under
+          const glow = ctx.createRadialGradient(0, 6, 0, 0, 6, 28);
+          glow.addColorStop(0, `rgba(100,255,180,${0.22 * pulse})`);
+          glow.addColorStop(1, 'rgba(100,255,180,0)');
+          ctx.fillStyle = glow;
+          ctx.beginPath(); ctx.ellipse(0, 6, 28, 14, 0, 0, Math.PI * 2); ctx.fill();
+          // lower disc
+          const discG = ctx.createLinearGradient(0, -3, 0, 5);
+          discG.addColorStop(0, '#7888a8');
+          discG.addColorStop(1, '#4a5868');
+          ctx.fillStyle = discG;
+          ctx.beginPath(); ctx.ellipse(0, 2, 22, 5, 0, 0, Math.PI * 2); ctx.fill();
+          // upper dome
+          const domeG = ctx.createLinearGradient(0, -12, 0, 0);
+          domeG.addColorStop(0, 'rgba(160,200,240,0.85)');
+          domeG.addColorStop(1, 'rgba(80,110,140,0.60)');
+          ctx.fillStyle = domeG;
+          ctx.beginPath(); ctx.ellipse(0, 0, 12, 9, 0, Math.PI, 0); ctx.fill();
+          // rim lights (cycle colors)
+          const lightColors = ['#ff4444','#44ff88','#4488ff','#ffee44','#ff44ff'];
+          for (let l = 0; l < 5; l++) {
+            const la = (l / 5) * Math.PI * 2 + T * 0.003;
+            const lx = Math.cos(la) * 18; const ly = 2 + Math.sin(la) * 3;
+            const ci = Math.floor((l + Math.floor(T * 0.003)) % lightColors.length);
+            ctx.globalAlpha = 0.55 + 0.45 * Math.sin(T * 0.005 + l);
+            ctx.fillStyle = lightColors[ci];
+            ctx.beginPath(); ctx.arc(lx, ly, 2.2, 0, Math.PI * 2); ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          // tractor beam (occasional)
+          if (Math.sin(T * 0.0004) > 0.4) {
+            const beamAlpha = (Math.sin(T * 0.0004) - 0.4) * 0.4;
+            const beam = ctx.createLinearGradient(0, 5, 0, 40);
+            beam.addColorStop(0, `rgba(120,255,180,${beamAlpha})`);
+            beam.addColorStop(1, 'rgba(120,255,180,0)');
+            ctx.fillStyle = beam;
+            ctx.beginPath();
+            ctx.moveTo(-6, 5); ctx.lineTo(6, 5);
+            ctx.lineTo(18, 40); ctx.lineTo(-18, 40);
+            ctx.closePath(); ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -1710,53 +1917,57 @@ export default function GameCanvas({ state }: Props) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // 8.5 ── ROAD TRAFFIC (same-direction + oncoming)
+    // 8.5 ── ROAD TRAFFIC (same-direction + oncoming, z-sorted by lane depth)
     // ════════════════════════════════════════════════════════════════════════
     {
       const TC_IDS  = ['tesla_m3_rwd','hyundai_ioniq5','chevy_bolt','kia_soul_ev','ford_mache','tesla_my','vw_id4','audi_etron_gt','chevy_bolt_2017','nissan_ariya'];
       const TC_COLS = ['#c62b2b','#2b7ac6','#e0e0e4','#c6a02b','#2a7a3a','#8b2bc6','#cc6020','#404060','#a0a0c0','#b84040','#3a80a8'];
-      // Wheel spin tied to player's scroll (approximate matching speed)
-      const trafficWA = (scrollPx / (Math.PI * WR * 2 / 12)) % (Math.PI * 2);
+      const trafficWA = (trafficScroll / (Math.PI * WR * 2 / 12)) % (Math.PI * 2);
 
-      // ── Same-direction traffic (right lanes, slightly slower → player overtakes) ──
+      // Collect all traffic cars; draw sorted by lane Y so closer lanes render on top
+      type TrafCar = { sx: number; ty: number; laneY: number; carIdx: number; colIdx: number; flip: boolean };
+      const cars: TrafCar[] = [];
+
+      // Same-direction (right lanes, player overtakes)
       const rngTraf = makeRng(seed + 0xaa0011);
       for (let i = 0; i < 6; i++) {
-        const baseX  = rngTraf() * W * 5;                        // 1
-        const laneR  = rngTraf();                                 // 2  lane selector
-        const carIdx = Math.floor(rngTraf() * TC_IDS.length);    // 3
-        const colIdx = Math.floor(rngTraf() * TC_COLS.length);   // 4
-        const lane   = laneR < 0.5 ? 6 : 17;  // right inner or outer lane Y offset
-        const sx     = ((baseX - scrollPx * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        const baseX  = rngTraf() * W * 5;
+        const laneR  = rngTraf();
+        const carIdx = Math.floor(rngTraf() * TC_IDS.length);
+        const colIdx = Math.floor(rngTraf() * TC_COLS.length);
+        const laneY  = laneR < 0.5 ? 6 : 17;
+        const sx     = ((baseX - trafficScroll * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
         const approxMi = offsetMi + sx * MI_PER_PX;
-        const ty = elToY(elevAt(approxMi)) + lane;
-        ctx.save();
-        ctx.translate(sx, ty);
-        ctx.beginPath(); ctx.ellipse(0, 2, 34, 5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill();
-        drawCarByStyle(ctx, TC_IDS[carIdx], TC_COLS[colIdx], trafficWA);
-        ctx.restore();
+        const ty = elToY(elevAt(approxMi)) + laneY;
+        cars.push({ sx, ty, laneY, carIdx, colIdx, flip: false });
       }
 
-      // ── Oncoming traffic (left lanes, approaching from the right) ────────────
+      // Oncoming (left lanes, approaching from the right, flipped)
       const rngOnc = makeRng(seed + 0xbb0022);
       for (let i = 0; i < 6; i++) {
-        const baseX  = rngOnc() * W * 5;                        // 1
-        const laneR  = rngOnc();                                 // 2  lane selector
-        const carIdx = Math.floor(rngOnc() * TC_IDS.length);    // 3
-        const colIdx = Math.floor(rngOnc() * TC_COLS.length);   // 4
-        const lane   = laneR < 0.5 ? -6 : -17; // left inner or outer lane Y offset
-        // +scrollPx makes them scroll rightward in screen (coming from right)
-        const sx = ((baseX - scrollPx * 2.0) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        const baseX  = rngOnc() * W * 5;
+        const laneR  = rngOnc();
+        const carIdx = Math.floor(rngOnc() * TC_IDS.length);
+        const colIdx = Math.floor(rngOnc() * TC_COLS.length);
+        const laneY  = laneR < 0.5 ? -6 : -17;
+        const sx     = ((baseX - trafficScroll * 2.0) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
         const approxMi = offsetMi + sx * MI_PER_PX;
-        const ty = elToY(elevAt(approxMi)) + lane;
+        const ty = elToY(elevAt(approxMi)) + laneY;
+        cars.push({ sx, ty, laneY, carIdx, colIdx, flip: true });
+      }
+
+      // Sort: lower laneY (further from viewer) drawn first, higher laneY on top
+      cars.sort((a, b) => a.laneY - b.laneY);
+
+      for (const c of cars) {
         ctx.save();
-        ctx.translate(sx, ty);
-        ctx.scale(-1, 1);  // flip horizontally — faces left (oncoming direction)
+        ctx.translate(c.sx, c.ty);
+        if (c.flip) ctx.scale(-1, 1);
         ctx.beginPath(); ctx.ellipse(0, 2, 34, 5, 0, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill();
-        drawCarByStyle(ctx, TC_IDS[carIdx], TC_COLS[colIdx], trafficWA);
+        drawCarByStyle(ctx, TC_IDS[c.carIdx], TC_COLS[c.colIdx], trafficWA);
         ctx.restore();
       }
     }
