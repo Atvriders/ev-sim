@@ -187,6 +187,10 @@ export function reducer(state: GameState, action: Action): GameState {
       const charger = route?.chargers.find(c => c.id === action.chargerId);
       if (!charger) return state;
       const car = getCar(state.selectedCar);
+      const { batteryBonus: bb } = computeUpgradeStats(state.upgrades);
+      const maxBatChk = car.batteryKwh + bb;
+      // Don't start a charge if battery is already above 99% — prevents loop after auto-charge
+      if (state.battery >= maxBatChk * 0.99) return notify(state, 'Battery already full.');
       const { chargeRateBonus } = computeUpgradeStats(state.upgrades);
       const rateKw = Math.min(charger.maxKw, car.maxChargeKw + chargeRateBonus);
       return {
@@ -300,7 +304,7 @@ export function reducer(state: GameState, action: Action): GameState {
       };
 
       // ── Auto-charge: trigger START_CHARGE when car arrives at queued charger ──
-      if (state.queuedChargerId && !dead && !complete) {
+      if (state.queuedChargerId && !dead && !complete && newBat < maxBat * 0.99) {
         const qc = route?.chargers.find(c => c.id === state.queuedChargerId);
         if (qc && newPos >= qc.positionMi - 0.5 && newPos < qc.positionMi + 1.5 && state.positionMi < qc.positionMi + 1.5) {
           const rateKw = Math.min(qc.maxKw, car.maxChargeKw + chargeRateBonus);
@@ -331,7 +335,9 @@ export function reducer(state: GameState, action: Action): GameState {
           }
         }
         const nextDCFC = route?.chargers
-          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1 && c.id !== skipped)
+          // +0.6 keeps charger outside the auto-charge near-trigger window (0.5 mi before charger),
+          // preventing immediate re-queue of the charger the car just finished charging at
+          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.6 && c.id !== skipped)
           .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null;
         const targetId = nextDCFC?.id ?? null;
         if (next.queuedChargerId !== targetId) {
