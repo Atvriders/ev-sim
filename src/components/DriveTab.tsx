@@ -68,10 +68,16 @@ export default function DriveTab({ state, dispatch }: Props) {
   const effMiKwh = car.efficiencyMiKwh;
   const estRange = (state.battery * effMiKwh).toFixed(0);
 
-  // Next charger ahead (within 10 mi) for the inline banner
+  // Next charger ahead (within 10 mi) for the inline banner.
+  // With Route Planner, only show DC fast chargers in the banner (planner manages the route);
+  // L1/L2 still appear in the Nearby Chargers list for manual use.
   const nextCharger = route
     ? route.chargers
-        .filter(c => c.positionMi > state.positionMi - 0.5 && c.positionMi <= state.positionMi + 10)
+        .filter(c =>
+          c.positionMi > state.positionMi - 0.5 &&
+          c.positionMi <= state.positionMi + 10 &&
+          (!hasPlanner || c.maxKw >= DCFC_MIN_KW)
+        )
         .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null
     : null;
 
