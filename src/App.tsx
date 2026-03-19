@@ -39,11 +39,11 @@ export default function App() {
     return () => clearInterval(id);
   }, [state]);
 
-  // Immediate save on route complete or battery dead so a refresh never loses progress
+  // Immediate save on any purchase or progression event so a refresh never loses progress
   useEffect(() => {
     saveGame(state);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.totalTrips, state.batteryDead]);
+  }, [state.totalTrips, state.batteryDead, state.upgrades, state.ownedCars, state.credits]);
 
   const car = getCar(state.selectedCar);
 
