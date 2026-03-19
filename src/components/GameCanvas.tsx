@@ -332,6 +332,8 @@ export default function GameCanvas({ state }: Props) {
       return skyH + (1 - (el - minEl) / elRange) * (groundBot - skyH);
     }
     function elevAt(mi: number): number {
+      if (mi <= terrain[0].distanceMi) return terrain[0].elevationFt;
+      if (mi >= terrain[terrain.length - 1].distanceMi) return terrain[terrain.length - 1].elevationFt;
       for (let i = 0; i < terrain.length - 1; i++) {
         if (terrain[i].distanceMi <= mi && terrain[i+1].distanceMi >= mi) {
           const t = (mi - terrain[i].distanceMi) / (terrain[i+1].distanceMi - terrain[i].distanceMi);
@@ -341,8 +343,9 @@ export default function GameCanvas({ state }: Props) {
       return terrain[terrain.length - 1].elevationFt;
     }
 
-    const visStart = Math.max(0, offsetMi - 0.5);
-    const visEnd   = Math.min(distTotal, offsetMi + VIEW_MILES + 0.5);
+    // Extend beyond route bounds so road fills full canvas at start/end
+    const visStart = offsetMi - 0.5;
+    const visEnd   = offsetMi + VIEW_MILES + 0.5;
     const STEPS    = 160;
     const stepMi   = (visEnd - visStart) / STEPS;
 
@@ -1170,13 +1173,84 @@ export default function GameCanvas({ state }: Props) {
     // ════════════════════════════════════════════════════════════════════════
     // 7 ── ROAD  (drawn AFTER vegetation)
     // ════════════════════════════════════════════════════════════════════════
-    terrainPath(0); ctx.strokeStyle = '#2a2a30'; ctx.lineWidth = 28; ctx.lineCap = 'round'; ctx.stroke();
-    terrainPath(0); ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 22; ctx.stroke();
-    terrainPath(0); ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 10; ctx.stroke();
-    terrainPath(-10); ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
-    terrainPath(10);  ctx.strokeStyle = 'rgba(255,255,255,0.40)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.lineCap = 'butt';
+    // Ground backing strip (wider fill under entire road, prevents sky/bg bleed at slopes)
+    {
+      const groundColor = theme === 'desert' ? '#6a3810' : theme === 'city' ? '#252520' : '#283420';
+      terrainPath(0);
+      ctx.lineTo(miToX(visEnd), H); ctx.lineTo(miToX(visStart), H); ctx.closePath();
+      ctx.fillStyle = groundColor; ctx.fill();
+    }
+    // Gravel/dirt shoulder (widest layer)
+    terrainPath(0); ctx.strokeStyle = theme === 'desert' ? '#6a4420' : theme === 'city' ? '#383830' : '#3a3828'; ctx.lineWidth = 36; ctx.stroke();
+    // White edge rumble strip (each side)
+    terrainPath(-16); ctx.strokeStyle = 'rgba(230,225,215,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+    terrainPath(16);  ctx.strokeStyle = 'rgba(230,225,215,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+    // Asphalt surface
+    terrainPath(0); ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 28; ctx.stroke();
+    terrainPath(0); ctx.strokeStyle = '#242430'; ctx.lineWidth = 22; ctx.stroke();
+    // Subtle asphalt texture (lighter center strip)
+    terrainPath(0); ctx.strokeStyle = 'rgba(40,40,52,0.50)'; ctx.lineWidth = 8; ctx.stroke();
+    // Edge lines (solid white, each shoulder)
+    terrainPath(-10); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
+    terrainPath(10);  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Center lane dash (yellow)
     terrainPath(-1);  ctx.strokeStyle = '#e8c030'; ctx.lineWidth = 2; ctx.setLineDash([18,14]); ctx.stroke();
-    ctx.setLineDash([]); ctx.lineCap = 'butt';
+    ctx.setLineDash([]);
+    // Mountain/alpine: guard rail on uphill side
+    if (theme === 'mountain' || theme === 'alpine') {
+      ctx.strokeStyle = 'rgba(180,185,200,0.55)'; ctx.lineWidth = 2;
+      terrainPath(-19); ctx.stroke();
+      // Posts
+      for (let s = 4; s < STEPS; s += 10) {
+        const mi2 = visStart + s * stepMi;
+        const gx = miToX(mi2), gy2 = elToY(elevAt(mi2));
+        ctx.strokeStyle = 'rgba(160,165,180,0.70)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(gx, gy2 - 12); ctx.lineTo(gx, gy2 - 22); ctx.stroke();
+      }
+    }
+    // City: raised concrete curb lines
+    if (theme === 'city') {
+      terrainPath(-16); ctx.strokeStyle = 'rgba(200,198,190,0.60)'; ctx.lineWidth = 3; ctx.stroke();
+      terrainPath(16);  ctx.strokeStyle = 'rgba(200,198,190,0.50)'; ctx.lineWidth = 3; ctx.stroke();
+    }
+    // Destination landmark at route END
+    {
+      const destX = miToX(distTotal);
+      if (destX > -60 && destX < W + 60) {
+        const destY = elToY(elevAt(distTotal));
+        // Flag pole
+        ctx.strokeStyle = '#909898'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(destX + 14, destY - 2); ctx.lineTo(destX + 14, destY - 44); ctx.stroke();
+        // Checkered flag
+        const flagColors = ['#111','#fff'];
+        for (let fy = 0; fy < 3; fy++) for (let fx = 0; fx < 4; fx++) {
+          ctx.fillStyle = flagColors[(fy + fx) % 2];
+          ctx.fillRect(destX + 14 + fx * 6, destY - 44 + fy * 6, 6, 6);
+        }
+        // Building silhouette (hotel/destination)
+        const bldW = 44, bldH = 36;
+        ctx.fillStyle = theme === 'city' ? '#2a3040' : theme === 'desert' ? '#8a6040' : '#2a3830';
+        ctx.fillRect(destX - bldW/2, destY - bldH, bldW, bldH);
+        // Roof line
+        ctx.fillStyle = theme === 'desert' ? '#6a4830' : '#1e2830';
+        ctx.fillRect(destX - bldW/2 - 2, destY - bldH - 4, bldW + 4, 5);
+        // Sign on building
+        ctx.fillStyle = '#ffda40';
+        ctx.font = 'bold 7px system-ui'; ctx.textAlign = 'center';
+        ctx.fillText('FINISH', destX, destY - bldH + 12);
+        // Windows
+        for (let wr = 0; wr < 3; wr++) for (let wc = 0; wc < 4; wc++) {
+          ctx.fillStyle = 'rgba(255,225,120,0.70)';
+          ctx.fillRect(destX - bldW/2 + 5 + wc*10, destY - bldH + 16 + wr * 8, 5, 4);
+        }
+        // Glow at ground level
+        const dg = ctx.createRadialGradient(destX, destY, 0, destX, destY, 40);
+        dg.addColorStop(0, 'rgba(255,220,60,0.22)'); dg.addColorStop(1, 'rgba(255,220,60,0)');
+        ctx.fillStyle = dg; ctx.beginPath(); ctx.ellipse(destX, destY, 40, 10, 0, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.lineCap = 'butt';
 
     // ════════════════════════════════════════════════════════════════════════
     // 8 ── CHARGER STATIONS
