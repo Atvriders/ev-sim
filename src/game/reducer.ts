@@ -343,25 +343,31 @@ export function reducer(state: GameState, action: Action): GameState {
 
       if (complete && !dead) {
         const reward = route.reward;
+        // Full-charge finish bonus: battery >= 100% at the line (can exceed maxBat via regen)
+        const fullChargeBonus = newBat >= maxBat ? Math.round(reward * 0.5) : 0;
+        const totalEarned = reward + fullChargeBonus;
         const log = {
           routeName: route.name,
           carName: `${car.brand} ${car.name}`,
           distanceMi: route.distanceMi,
           kwhUsed: (updates.totalKwhUsed ?? state.totalKwhUsed) - state.totalKwhUsed,
           kwhCharged: (updates.totalKwhCharged ?? state.totalKwhCharged) - state.kwhChargedAtDriveStart,
-          creditsEarned: reward,
+          creditsEarned: totalEarned,
           completed: true,
         };
+        const msg = fullChargeBonus > 0
+          ? `Route complete! +${reward} credits ⚡ Full-charge bonus +${fullChargeBonus}!`
+          : `Route complete! +${reward} credits`;
         next = notify(
           {
             ...next,
-            credits: state.credits + reward,
+            credits: state.credits + totalEarned,
             totalTrips: state.totalTrips + 1,
             driving: false,
             speedMph: 0,
             log: [log, ...state.log].slice(0, 50),
           },
-          `Route complete! +${reward} credits`
+          msg
         );
       } else if (dead) {
         const log = {
