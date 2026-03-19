@@ -127,8 +127,9 @@ export function computeKw(
 
   if (kw < 0) {
     // Regen: cap at maxChargeKw for regen and scale by regen multiplier
+    // freeKw (solar/suspension) also contributes to charging during regen — add, not subtract
     const regenKw = Math.min(Math.abs(kw) * regenMult, car.maxChargeKw * 0.3);
-    return -(regenKw - freeKw);
+    return -(regenKw + freeKw);
   }
 
   return Math.max(0, kw * efficiencyMult - freeKw);

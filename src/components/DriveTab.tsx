@@ -172,8 +172,8 @@ export default function DriveTab({ state, dispatch }: Props) {
             {state.battery.toFixed(1)} / {maxBat.toFixed(1)} kWh
           </span>
           {state.isCharging && (() => {
-            const tier = chargerTier(state.chargeRateKw);
             const activeCharger = route?.chargers.find(c => c.id === state.chargingAtId);
+            const tier = chargerTier(activeCharger?.maxKw ?? state.chargeRateKw);
             const kwhTo80  = Math.max(0, maxBat * 0.80 - state.battery);
             const kwhToFull = Math.max(0, maxBat - state.battery);
             const hTo80  = kwhTo80  / state.chargeRateKw;

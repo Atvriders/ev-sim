@@ -107,6 +107,7 @@ export interface GameState {
   totalMilesDriven: number;
   totalKwhUsed: number;
   totalKwhCharged: number;
+  kwhChargedAtDriveStart: number;  // snapshot at START_DRIVE for per-trip log accuracy
   log: DriveLog[];
 
   // UI

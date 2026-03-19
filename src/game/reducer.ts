@@ -38,6 +38,7 @@ function buildInitialState(): GameState {
     totalMilesDriven: 0,
     totalKwhUsed: 0,
     totalKwhCharged: 0,
+    kwhChargedAtDriveStart: 0,
     log: [],
 
     tab: 'drive',
@@ -143,6 +144,7 @@ export function reducer(state: GameState, action: Action): GameState {
           currentRoute: route.id,
           targetSpeedMph: 0,
           battery: car.batteryKwh + batteryBonus, // full charge at start
+          kwhChargedAtDriveStart: state.totalKwhCharged,
         },
         `Starting ${route.name}!`
       );
@@ -225,7 +227,7 @@ export function reducer(state: GameState, action: Action): GameState {
         const newBat = Math.min(state.battery + chargedKwh, maxBat);
         const rawCost = chargedKwh * (charger?.pricePerKwh ?? 0.27);
         const cost = rawCost * (1 - v2gReturn);   // V2G returns a fraction
-        const full = newBat >= maxBat;
+        const full = newBat >= maxBat - 0.001;
         if (full) {
           const resumeRoute = getRoute(state.currentRoute ?? '');
           const resumeLimit = resumeRoute?.terrain.reduce((lim, pt) => {
@@ -295,7 +297,7 @@ export function reducer(state: GameState, action: Action): GameState {
       // ── Auto-charge: trigger START_CHARGE when car arrives at queued charger ──
       if (state.queuedChargerId && !dead && !complete) {
         const qc = route?.chargers.find(c => c.id === state.queuedChargerId);
-        if (qc && Math.abs(newPos - qc.positionMi) < 0.3) {
+        if (qc && newPos >= qc.positionMi - 0.5 && newPos < qc.positionMi + 1.5 && state.positionMi < qc.positionMi + 1.5) {
           const rateKw = Math.min(qc.maxKw, car.maxChargeKw + chargeRateBonus);
           next = notify(
             {
@@ -339,7 +341,7 @@ export function reducer(state: GameState, action: Action): GameState {
           carName: `${car.brand} ${car.name}`,
           distanceMi: route.distanceMi,
           kwhUsed: (updates.totalKwhUsed ?? state.totalKwhUsed) - state.totalKwhUsed,
-          kwhCharged: state.totalKwhCharged,
+          kwhCharged: (updates.totalKwhCharged ?? state.totalKwhCharged) - state.kwhChargedAtDriveStart,
           creditsEarned: reward,
           completed: true,
         };
@@ -360,7 +362,7 @@ export function reducer(state: GameState, action: Action): GameState {
           carName: `${car.brand} ${car.name}`,
           distanceMi: newPos,
           kwhUsed: (updates.totalKwhUsed ?? state.totalKwhUsed) - state.totalKwhUsed,
-          kwhCharged: state.totalKwhCharged,
+          kwhCharged: (updates.totalKwhCharged ?? state.totalKwhCharged) - state.kwhChargedAtDriveStart,
           creditsEarned: 0,
           completed: false,
         };
