@@ -831,7 +831,7 @@ export default function GameCanvas({ state }: Props) {
 
       // ── Bird flocks ───────────────────────────────────────────────────────
       for (let flock = 0; flock < 3; flock++) {
-        const rngBird = makeRng(seed + 0xb1rd + flock * 0x100);
+        const rngBird = makeRng(seed + 0xb11d + flock * 0x100);
         const baseX   = rngBird() * W * 6;
         const baseY   = 10 + rngBird() * skyH * 0.65;
         const spd     = 0.014 + rngBird() * 0.018;
@@ -898,7 +898,7 @@ export default function GameCanvas({ state }: Props) {
 
       // ── Parachutist ───────────────────────────────────────────────────────
       {
-        const rngPar = makeRng(seed + 0xd1ve);
+        const rngPar = makeRng(seed + 0xd1ce);
         const baseX  = rngPar() * W * 4;
         const descent = (T * 0.008) % (skyH * 0.9);
         const sx     = (baseX + T * 0.003) % (W * 4) - W * 0.2;
