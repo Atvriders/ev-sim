@@ -111,10 +111,28 @@ export default function DriveTab({ state, dispatch }: Props) {
           <div className="gauge-unit">kW</div>
         </div>
 
-        <div className="gauge">
+        <div className="gauge" style={{ position: 'relative' }}>
           <div className="gauge-label">Speed</div>
-          <div className="gauge-value">{state.speedMph.toFixed(0)}</div>
-          <div className="gauge-unit">mph  · limit {speedLimit}</div>
+          <div
+            className="gauge-value"
+            style={{ color: state.speedMph > speedLimit + 2 ? '#f85149' : undefined }}
+          >
+            {state.speedMph.toFixed(0)}
+          </div>
+          <div className="gauge-unit">mph</div>
+          {/* Speed limit sign */}
+          <div style={{
+            position: 'absolute', top: 4, right: 4,
+            background: '#fff', border: '3px solid #111',
+            borderRadius: 4, padding: '2px 6px', textAlign: 'center',
+            lineHeight: 1.1, minWidth: 36,
+            boxShadow: state.speedMph > speedLimit + 2
+              ? '0 0 8px 2px #f85149' : '0 1px 4px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ fontSize: 7, fontWeight: 800, color: '#111', letterSpacing: '0.04em' }}>SPEED</div>
+            <div style={{ fontSize: 7, fontWeight: 800, color: '#111', letterSpacing: '0.04em' }}>LIMIT</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#111', lineHeight: 1.05 }}>{speedLimit}</div>
+          </div>
         </div>
 
         <div className="gauge">
