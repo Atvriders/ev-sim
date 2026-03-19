@@ -817,7 +817,7 @@ export default function GameCanvas({ state }: Props) {
         ctx.beginPath(); ctx.arc(sx, gy-h*0.65, h*0.40, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#348020';
         ctx.beginPath(); ctx.arc(sx-h*0.18, gy-h*0.70, h*0.28, 0, Math.PI*2); ctx.fill();
-      } else if (theme === 'mountain' || (theme === 'alpine' && tp < 0.5)) {
+      } else if (theme === 'mountain') {
         // Dense pines
         const layers: [number, number, string][] = [[0.55, 0.32, '#1a4820'], [0.72, 0.10, '#1e5428'], [1.0, 0, '#246030']];
         for (const [topF, botF, col] of layers) {
