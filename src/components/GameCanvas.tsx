@@ -410,130 +410,268 @@ export default function GameCanvas({ state }: Props) {
     // 2 ── THEME-SPECIFIC FAR BACKGROUND
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── CITY: building skyline ────────────────────────────────────────────
+    // ── CITY ─────────────────────────────────────────────────────────────
     if (theme === 'city') {
-      const rngB = makeRng(seed + 7);
-      for (let i = 0; i < 16; i++) {
-        const wx  = rngB() * W * 2.8;                                           // 1
-        const sx  = ((wx - scrollPx * 0.10) % (W * 2.8) + W * 2.8) % (W * 2.8);
-        if (sx < -55 || sx > W + 55) { rngB(); rngB(); continue; }              // skip 2
-        const bh  = 32 + rngB() * 75;                                            // 1
-        const bw  = 18 + rngB() * 38;                                            // 1
-        const bg  = ctx.createLinearGradient(sx, skyH - bh, sx, skyH + 2);
-        bg.addColorStop(0, '#1c2838'); bg.addColorStop(1, '#283040');
-        ctx.fillStyle = bg;
-        ctx.fillRect(sx - bw/2, skyH - bh, bw, bh + 3);
-        // antenna on tall buildings
-        if (bh > 80) {
-          ctx.strokeStyle = '#405060'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.moveTo(sx, skyH - bh); ctx.lineTo(sx, skyH - bh - 14); ctx.stroke();
+      // Smog/pollution haze
+      const smog = ctx.createLinearGradient(0, skyH * 0.5, 0, skyH);
+      smog.addColorStop(0, 'rgba(120,140,100,0)');
+      smog.addColorStop(1, 'rgba(120,140,100,0.22)');
+      ctx.fillStyle = smog; ctx.fillRect(0, skyH * 0.5, W, skyH * 0.5);
+
+      // Far background towers (very distant, darker)
+      const rngBg = makeRng(seed + 13);
+      for (let i = 0; i < 22; i++) {
+        const wx = rngBg() * W * 3.5;                                            // 1
+        const sx = ((wx - scrollPx * 0.06) % (W * 3.5) + W * 3.5) % (W * 3.5);
+        if (sx < -30 || sx > W + 30) { rngBg(); rngBg(); continue; }            // skip 2
+        const bh = 40 + rngBg() * 90;                                            // 1
+        const bw = 12 + rngBg() * 28;                                            // 1
+        ctx.fillStyle = '#16202e';
+        ctx.fillRect(sx - bw/2, skyH - bh, bw, bh + 2);
+        if (bh > 95) { // antenna spire
+          ctx.strokeStyle = '#283848'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(sx, skyH-bh); ctx.lineTo(sx, skyH-bh-18); ctx.stroke();
+          ctx.beginPath(); ctx.arc(sx, skyH-bh-18, 2, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(255,80,80,0.7)'; ctx.fill();
         }
-        // lit windows (seeded per-building so deterministic regardless of visibility)
-        const rngW = makeRng(seed + 100 + i);
-        const cols = Math.floor(bw / 7);
-        const rows = Math.floor(bh / 9);
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            if (rngW() < 0.55) {
-              ctx.fillStyle = rngW() < 0.15 ? 'rgba(200,220,255,0.65)' : 'rgba(255,235,140,0.60)';
-              ctx.fillRect(sx - bw/2 + 3 + c * 7, skyH - bh + 5 + r * 9, 4, 5);
-            } else { rngW(); }
-          }
+        const rngWb = makeRng(seed + 200 + i);
+        const cols2 = Math.floor(bw / 6); const rows2 = Math.floor(bh / 8);
+        for (let r = 0; r < rows2; r++) for (let c = 0; c < cols2; c++) {
+          ctx.fillStyle = rngWb() < 0.45 ? 'rgba(255,230,120,0.35)' : 'transparent';
+          if (rngWb() < 0.45) ctx.fillRect(sx - bw/2 + 2 + c*6, skyH - bh + 4 + r*8, 3, 4);
         }
       }
-      // Street lights (midground, fast parallax)
+
+      // Mid-ground buildings
+      const rngB = makeRng(seed + 7);
+      for (let i = 0; i < 20; i++) {
+        const wx  = rngB() * W * 2.8;                                            // 1
+        const sx  = ((wx - scrollPx * 0.12) % (W * 2.8) + W * 2.8) % (W * 2.8);
+        if (sx < -55 || sx > W + 55) { rngB(); rngB(); continue; }              // skip 2
+        const bh  = 35 + rngB() * 80;                                            // 1
+        const bw  = 20 + rngB() * 40;                                            // 1
+        const bg  = ctx.createLinearGradient(sx, skyH - bh, sx + bw*0.5, skyH);
+        bg.addColorStop(0, '#1e2c3e'); bg.addColorStop(0.6, '#243444'); bg.addColorStop(1, '#2c3c50');
+        ctx.fillStyle = bg;
+        ctx.fillRect(sx - bw/2, skyH - bh, bw, bh + 2);
+        // rooftop details
+        ctx.fillStyle = '#304050'; ctx.fillRect(sx - bw/2, skyH - bh - 3, bw, 4);
+        if (bh > 78) {
+          ctx.strokeStyle = '#506070'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(sx, skyH-bh-3); ctx.lineTo(sx, skyH-bh-16); ctx.stroke();
+          ctx.beginPath(); ctx.arc(sx, skyH-bh-16, 2.5, 0, Math.PI*2);
+          ctx.fillStyle = 'rgba(255,60,60,0.8)'; ctx.fill();
+        }
+        // billboard on some buildings
+        if (bh > 55 && bw > 28 && i % 4 === 0) {
+          const bbw = bw * 0.85, bbh = 10;
+          const bby = skyH - bh * 0.55;
+          ctx.fillStyle = 'rgba(0,80,160,0.85)';
+          ctx.fillRect(sx - bbw/2, bby, bbw, bbh);
+          ctx.strokeStyle = '#80b0e0'; ctx.lineWidth = 0.8;
+          ctx.strokeRect(sx - bbw/2, bby, bbw, bbh);
+        }
+        const rngW = makeRng(seed + 100 + i);
+        const cols = Math.floor(bw / 7); const rows = Math.floor(bh / 9);
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          if (rngW() < 0.58) {
+            ctx.fillStyle = rngW() < 0.12 ? 'rgba(180,210,255,0.70)' : 'rgba(255,238,145,0.65)';
+            ctx.fillRect(sx - bw/2 + 3 + c*7, skyH - bh + 5 + r*9, 4, 5);
+          } else { rngW(); }
+        }
+      }
+
+      // Foreground shorter buildings (near parallax)
+      const rngBn = makeRng(seed + 14);
+      for (let i = 0; i < 14; i++) {
+        const wx = rngBn() * W * 1.8;                                            // 1
+        const sx = ((wx - scrollPx * 0.20) % (W * 1.8) + W * 1.8) % (W * 1.8);
+        if (sx < -30 || sx > W + 30) { rngBn(); rngBn(); continue; }            // skip 2
+        const approxMi2 = offsetMi + sx * MI_PER_PX;
+        const py2 = elToY(elevAt(approxMi2));
+        const bh = 18 + rngBn() * 28;                                            // 1
+        const bw = 22 + rngBn() * 36;                                            // 1
+        ctx.fillStyle = '#283444';
+        ctx.fillRect(sx - bw/2, py2 - bh, bw, bh);
+        ctx.fillStyle = '#1e2838';
+        ctx.fillRect(sx - bw/2, py2 - bh - 3, bw, 4);
+        const rngW2 = makeRng(seed + 300 + i);
+        const cols2 = Math.floor(bw/8); const rows2 = Math.floor(bh/10);
+        for (let r = 0; r < rows2; r++) for (let c = 0; c < cols2; c++) {
+          if (rngW2() < 0.50) {
+            ctx.fillStyle = 'rgba(255,235,140,0.55)';
+            ctx.fillRect(sx - bw/2 + 3 + c*8, py2 - bh + 4 + r*10, 4, 5);
+          } else { rngW2(); }
+        }
+      }
+
+      // Street lamps + traffic lights
       const rngL = makeRng(seed + 8);
-      for (let i = 0; i < 12; i++) {
-        const wx  = rngL() * W * 1.8;                                            // 1
-        const sx  = ((wx - scrollPx * 0.72) % (W * 1.8) + W * 1.8) % (W * 1.8);
+      for (let i = 0; i < 16; i++) {
+        const wx  = rngL() * W * 1.6;                                            // 1
+        const sx  = ((wx - scrollPx * 0.78) % (W * 1.6) + W * 1.6) % (W * 1.6);
         if (sx < -10 || sx > W + 10) { rngL(); continue; }                      // skip 1
         const approxMi = offsetMi + sx * MI_PER_PX;
         const py = elToY(elevAt(approxMi));
-        const ph  = 28 + rngL() * 14;                                            // 1
+        const ph  = 26 + rngL() * 16;                                            // 1
         ctx.strokeStyle = '#5a6070'; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.moveTo(sx, py); ctx.lineTo(sx, py - ph); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx, py - ph); ctx.lineTo(sx + 10, py - ph); ctx.stroke();
-        ctx.beginPath(); ctx.arc(sx + 10, py - ph, 3, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,230,150,0.85)'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(sx, py-ph); ctx.lineTo(sx+10, py-ph); ctx.stroke();
+        // lamp glow
+        const lg = ctx.createRadialGradient(sx+10, py-ph, 0, sx+10, py-ph, 8);
+        lg.addColorStop(0, 'rgba(255,230,130,0.9)'); lg.addColorStop(1, 'rgba(255,230,130,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(sx+10, py-ph, 8, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+10, py-ph, 3, 0, Math.PI*2);
+        ctx.fillStyle = '#ffe880'; ctx.fill();
       }
     }
 
-    // ── COASTAL: ocean band + cliffs ──────────────────────────────────────
+    // ── COASTAL ───────────────────────────────────────────────────────────
     if (theme === 'coastal') {
-      // Ocean fill behind terrain
-      const oceanY = skyH + 4;
-      const og = ctx.createLinearGradient(0, oceanY, 0, oceanY + 30);
-      og.addColorStop(0, '#1868b8'); og.addColorStop(1, '#0a3860');
-      ctx.fillStyle = og; ctx.fillRect(0, oceanY, W, 30);
-      // Shimmer lines
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = '#80d0f8'; ctx.lineWidth = 1;
-      for (let i = 0; i < 7; i++) {
-        const wx2 = ((i * 120 + scrollPx * 0.4) % (W * 1.2) + W * 1.2) % (W * 1.2) - 60;
-        ctx.beginPath(); ctx.moveTo(wx2, oceanY + 6 + i % 3 * 4); ctx.lineTo(wx2 + 22, oceanY + 6 + i % 3 * 4); ctx.stroke();
+      // Full ocean fill from skyH down
+      const og = ctx.createLinearGradient(0, skyH, 0, groundBot);
+      og.addColorStop(0, '#1478c8'); og.addColorStop(0.3, '#0e5898');
+      og.addColorStop(0.8, '#082848'); og.addColorStop(1, '#041428');
+      ctx.fillStyle = og; ctx.fillRect(0, skyH, W, groundBot - skyH);
+
+      // Sun reflection path on water
+      const refG = ctx.createLinearGradient(W*0.6, skyH, W*0.8, skyH + 20);
+      refG.addColorStop(0, 'rgba(255,230,100,0)');
+      refG.addColorStop(0.5, 'rgba(255,230,100,0.22)');
+      refG.addColorStop(1, 'rgba(255,230,100,0)');
+      ctx.fillStyle = refG; ctx.fillRect(W*0.5, skyH, W*0.5, 30);
+
+      // Wave layers (3 depths)
+      for (let layer = 0; layer < 3; layer++) {
+        const waveY = skyH + 8 + layer * 14;
+        const waveAlpha = 0.15 + layer * 0.12;
+        const waveSpeed = 0.3 + layer * 0.25;
+        ctx.strokeStyle = `rgba(150,210,255,${waveAlpha})`; ctx.lineWidth = 1.5 - layer * 0.3;
+        for (let w = 0; w < 9; w++) {
+          const wx2 = ((w * 95 + scrollPx * waveSpeed) % (W * 1.1) + W * 1.1) % (W * 1.1) - 50;
+          const wy = waveY + Math.sin(w * 1.3 + scrollPx * 0.008) * 2;
+          ctx.beginPath(); ctx.moveTo(wx2, wy);
+          ctx.quadraticCurveTo(wx2 + 14, wy - 2, wx2 + 28, wy);
+          ctx.stroke();
+        }
       }
-      ctx.globalAlpha = 1;
-      // Seagulls
-      const rngG = makeRng(seed + 11);
-      ctx.strokeStyle = 'rgba(200,220,240,0.7)'; ctx.lineWidth = 1;
+
+      // Sailboats
+      const rngBt = makeRng(seed + 15);
+      for (let i = 0; i < 5; i++) {
+        const wx2 = rngBt() * W * 6;                                             // 1
+        const sx  = ((wx2 - scrollPx * 0.08) % (W * 6) + W * 6) % (W * 6);
+        if (sx < -30 || sx > W + 30) { rngBt(); rngBt(); continue; }            // skip 2
+        const by  = skyH + 10 + rngBt() * 20;                                    // 1
+        const bs  = 0.5 + rngBt() * 1.0;                                         // 1 scale
+        // hull
+        ctx.fillStyle = '#f0e8d0';
+        ctx.beginPath(); ctx.moveTo(sx-10*bs, by); ctx.lineTo(sx+12*bs, by); ctx.lineTo(sx+8*bs, by+5*bs); ctx.lineTo(sx-8*bs, by+5*bs); ctx.closePath(); ctx.fill();
+        // mast
+        ctx.strokeStyle = '#c8b890'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx, by); ctx.lineTo(sx, by-22*bs); ctx.stroke();
+        // sail
+        ctx.fillStyle = 'rgba(255,248,235,0.88)';
+        ctx.beginPath(); ctx.moveTo(sx, by-22*bs); ctx.lineTo(sx+14*bs, by-8*bs); ctx.lineTo(sx, by); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(240,235,220,0.70)';
+        ctx.beginPath(); ctx.moveTo(sx, by-22*bs); ctx.lineTo(sx-8*bs, by-6*bs); ctx.lineTo(sx, by); ctx.closePath(); ctx.fill();
+      }
+
+      // Cliffs / headlands (taller, more prominent)
+      const rngCl = makeRng(seed + 2);
       for (let i = 0; i < 10; i++) {
-        const wx2 = rngG() * W * 7;                                              // 1
-        const sx  = ((wx2 - scrollPx * 0.22) % (W * 7) + W * 7) % (W * 7);
-        if (sx < -12 || sx > W + 12) { rngG(); rngG(); continue; }              // skip 2
-        const gy2 = 6 + rngG() * (skyH * 0.55);                                  // 1
-        const sz  = 3 + rngG() * 4;                                              // 1
+        const wx2 = rngCl() * W * 3.5;                                           // 1
+        const sx  = ((wx2 - scrollPx * 0.07) % (W * 3.5) + W * 3.5) % (W * 3.5);
+        if (sx < -130 || sx > W + 130) { rngCl(); rngCl(); continue; }          // skip 2
+        const ch  = 40 + rngCl() * 58;                                           // 1
+        const cw  = 80 + rngCl() * 130;                                          // 1
+        const clg = ctx.createLinearGradient(sx, skyH - ch, sx, skyH + 5);
+        clg.addColorStop(0, '#2a5038'); clg.addColorStop(0.6, '#1e3a28'); clg.addColorStop(1, '#182e20');
+        ctx.fillStyle = clg;
         ctx.beginPath();
-        ctx.moveTo(sx - sz, gy2); ctx.lineTo(sx, gy2 - sz*0.5); ctx.lineTo(sx + sz, gy2);
+        ctx.moveTo(sx - cw/2, skyH + 5);
+        ctx.lineTo(sx - cw/2 + 5, skyH - ch + 15);
+        ctx.bezierCurveTo(sx - cw*0.15, skyH - ch, sx + cw*0.15, skyH - ch, sx + cw/2 - 5, skyH - ch + 12);
+        ctx.lineTo(sx + cw/2, skyH + 5);
+        ctx.closePath(); ctx.fill();
+        // Cliff face detail
+        ctx.strokeStyle = 'rgba(20,50,30,0.4)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx - cw*0.25, skyH - ch*0.3); ctx.lineTo(sx - cw*0.15, skyH); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx + cw*0.10, skyH - ch*0.5); ctx.lineTo(sx + cw*0.20, skyH); ctx.stroke();
+      }
+
+      // Seagulls (more of them, clustered near water)
+      const rngG = makeRng(seed + 11);
+      ctx.strokeStyle = 'rgba(220,235,248,0.75)'; ctx.lineWidth = 1.2;
+      for (let i = 0; i < 18; i++) {
+        const wx2 = rngG() * W * 6;                                              // 1
+        const sx  = ((wx2 - scrollPx * 0.20) % (W * 6) + W * 6) % (W * 6);
+        if (sx < -12 || sx > W + 12) { rngG(); rngG(); continue; }              // skip 2
+        const gy2 = 4 + rngG() * (skyH * 0.65);                                  // 1
+        const sz  = 2.5 + rngG() * 4.5;                                          // 1
+        ctx.beginPath();
+        ctx.moveTo(sx-sz, gy2); ctx.lineTo(sx, gy2-sz*0.45); ctx.lineTo(sx+sz, gy2);
         ctx.stroke();
       }
-      // Coastal cliff shapes
-      const rngCl = makeRng(seed + 2);
-      for (let i = 0; i < 8; i++) {
-        const wx2 = rngCl() * W * 4;                                             // 1
-        const sx  = ((wx2 - scrollPx * 0.06) % (W * 4) + W * 4) % (W * 4);
-        if (sx < -120 || sx > W + 120) { rngCl(); rngCl(); continue; }          // skip 2
-        const ch  = 25 + rngCl() * 40;                                           // 1
-        const cw  = 70 + rngCl() * 100;                                          // 1
-        ctx.beginPath();
-        ctx.moveTo(sx - cw/2, skyH + 3);
-        ctx.lineTo(sx - cw/2, skyH - ch + 8);
-        ctx.bezierCurveTo(sx - cw*0.2, skyH - ch, sx + cw*0.2, skyH - ch, sx + cw/2, skyH - ch + 8);
-        ctx.lineTo(sx + cw/2, skyH + 3);
-        ctx.closePath();
-        ctx.fillStyle = '#2a4a30'; ctx.fill();
-      }
+
+      // Sandy beach strip
+      const sandG = ctx.createLinearGradient(0, groundBot - 14, 0, groundBot);
+      sandG.addColorStop(0, 'rgba(210,185,130,0.5)'); sandG.addColorStop(1, 'rgba(180,155,100,0)');
+      ctx.fillStyle = sandG;
+      ctx.beginPath(); terrainPath(-2); ctx.lineTo(miToX(visEnd), groundBot); ctx.lineTo(miToX(visStart), groundBot); ctx.closePath();
+      ctx.fill();
     }
 
-    // ── MOUNTAINS / ALPINE / VALLEY / COUNTRY: mountain layers ───────────
+    // ── MOUNTAINS / ALPINE / VALLEY / COUNTRY ─────────────────────────────
     if (['mountain','alpine','valley','country'].includes(theme)) {
       const dramatic = theme === 'mountain' || theme === 'alpine';
+
+      // Ultra-far ghost mountains (barely visible, sky-filling)
+      const rngMg = makeRng(seed + 13);
+      ctx.globalAlpha = dramatic ? 0.30 : 0.18;
+      for (let i = 0; i < 20; i++) {
+        const wx  = rngMg() * W * 6;                                             // 1
+        const sx  = ((wx - scrollPx * 0.02) % (W * 6) + W * 6) % (W * 6);
+        if (sx < -200 || sx > W + 200) { rngMg(); rngMg(); continue; }          // skip 2
+        const ph  = (dramatic ? 60 : 30) + rngMg() * (dramatic ? 80 : 40);     // 1
+        const bw  = 120 + rngMg() * 200;                                         // 1
+        ctx.beginPath();
+        ctx.moveTo(sx - bw/2, skyH + 2);
+        ctx.bezierCurveTo(sx - bw*0.3, skyH - ph*0.5, sx - bw*0.08, skyH - ph, sx, skyH - ph);
+        ctx.bezierCurveTo(sx + bw*0.08, skyH - ph, sx + bw*0.3, skyH - ph*0.5, sx + bw/2, skyH + 2);
+        ctx.closePath();
+        ctx.fillStyle = theme === 'alpine' ? '#1a2030' : '#7098b8'; ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
       // Far mountains
       const rngMf = makeRng(seed + 2);
-      ctx.globalAlpha = dramatic ? 0.65 : 0.45;
-      for (let i = 0; i < 10; i++) {
-        const wx  = rngMf() * W * 4.5;                                           // 1
-        const sx  = ((wx - scrollPx * 0.04) % (W * 4.5) + W * 4.5) % (W * 4.5);
+      ctx.globalAlpha = dramatic ? 0.72 : 0.52;
+      for (let i = 0; i < 14; i++) {
+        const wx  = rngMf() * W * 4.0;                                           // 1
+        const sx  = ((wx - scrollPx * 0.04) % (W * 4.0) + W * 4.0) % (W * 4.0);
         if (sx < -150 || sx > W + 150) { rngMf(); rngMf(); continue; }          // skip 2
-        const ph  = (dramatic ? 48 : 28) + rngMf() * (dramatic ? 60 : 40);      // 1
-        const bw  = 90 + rngMf() * 130;                                          // 1
+        const ph  = (dramatic ? 55 : 32) + rngMf() * (dramatic ? 70 : 45);     // 1
+        const bw  = 85 + rngMf() * 130;                                          // 1
         ctx.beginPath();
         ctx.moveTo(sx - bw/2, skyH + 2);
         ctx.bezierCurveTo(sx - bw*0.28, skyH - ph*0.5, sx - bw*0.08, skyH - ph, sx, skyH - ph);
         ctx.bezierCurveTo(sx + bw*0.08, skyH - ph, sx + bw*0.28, skyH - ph*0.5, sx + bw/2, skyH + 2);
         ctx.closePath();
-        ctx.fillStyle = theme === 'alpine' ? '#1a2840' : '#5880a8';
-        ctx.fill();
+        const fmc = theme === 'alpine' ? '#1a2840' : theme === 'valley' ? '#4a6888' : '#5070a0';
+        ctx.fillStyle = fmc; ctx.fill();
       }
       ctx.globalAlpha = 1;
+
       // Near mountains
       const rngMn = makeRng(seed + 9);
-      for (let i = 0; i < 8; i++) {
-        const wx  = rngMn() * W * 3.2;                                           // 1
-        const sx  = ((wx - scrollPx * 0.09) % (W * 3.2) + W * 3.2) % (W * 3.2);
+      for (let i = 0; i < 12; i++) {
+        const wx  = rngMn() * W * 3.0;                                           // 1
+        const sx  = ((wx - scrollPx * 0.09) % (W * 3.0) + W * 3.0) % (W * 3.0);
         if (sx < -140 || sx > W + 140) { rngMn(); rngMn(); rngMn(); continue; } // skip 3
-        const ph     = (dramatic ? 65 : 40) + rngMn() * (dramatic ? 80 : 50);   // 1
-        const bw     = 70 + rngMn() * 110;                                       // 1
-        const jagged = rngMn() > (dramatic ? 0.3 : 0.5);                         // 1
+        const ph     = (dramatic ? 72 : 44) + rngMn() * (dramatic ? 88 : 55);  // 1
+        const bw     = 65 + rngMn() * 115;                                       // 1
+        const jagged = rngMn() > (dramatic ? 0.25 : 0.5);                        // 1
         ctx.beginPath();
         ctx.moveTo(sx - bw/2, skyH + 2);
         if (jagged) {
@@ -547,96 +685,278 @@ export default function GameCanvas({ state }: Props) {
           ctx.bezierCurveTo(sx + bw*0.06, skyH - ph, sx + bw*0.22, skyH - ph*0.48, sx + bw/2, skyH + 2);
         }
         ctx.lineTo(sx + bw/2, skyH + 2); ctx.closePath();
-        const mc = theme === 'alpine' ? '#0a1828' : theme === 'mountain' ? '#1a3050' : '#243a5a';
-        const mg = ctx.createLinearGradient(sx, skyH - ph, sx, skyH + 2);
-        mg.addColorStop(0, mc); mg.addColorStop(1, theme === 'alpine' ? '#182038' : '#28405e');
+        const mc  = theme === 'alpine' ? '#0a1828' : theme === 'mountain' ? '#1a3050' : '#243a5a';
+        const mc2 = theme === 'alpine' ? '#182038' : '#28405e';
+        const mg  = ctx.createLinearGradient(sx, skyH - ph, sx, skyH + 2);
+        mg.addColorStop(0, mc); mg.addColorStop(1, mc2);
         ctx.fillStyle = mg; ctx.fill();
-        // Snow caps
-        const snowThresh = dramatic ? 60 : 80;
+        const snowThresh = dramatic ? 55 : 80;
         if (ph > snowThresh) {
-          const sw = bw * (jagged ? 0.13 : 0.17);
-          ctx.beginPath();
-          ctx.moveTo(sx - sw, skyH - ph + ph * 0.28);
-          ctx.lineTo(sx, skyH - ph);
-          ctx.lineTo(sx + sw, skyH - ph + ph * 0.28);
-          ctx.closePath();
-          ctx.fillStyle = theme === 'alpine' ? 'rgba(220,235,255,0.95)' : 'rgba(228,238,248,0.88)';
-          ctx.fill();
-          ctx.fillStyle = 'rgba(255,255,255,0.40)';
-          ctx.beginPath(); ctx.moveTo(sx - sw*0.4, skyH - ph + ph*0.06); ctx.lineTo(sx, skyH - ph); ctx.lineTo(sx + sw*0.2, skyH - ph + ph*0.10); ctx.closePath(); ctx.fill();
+          const sw = bw * (jagged ? 0.14 : 0.18);
+          ctx.beginPath(); ctx.moveTo(sx-sw, skyH-ph+ph*0.28); ctx.lineTo(sx, skyH-ph); ctx.lineTo(sx+sw, skyH-ph+ph*0.28); ctx.closePath();
+          ctx.fillStyle = theme === 'alpine' ? 'rgba(220,235,255,0.95)' : 'rgba(228,238,248,0.90)'; ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.42)';
+          ctx.beginPath(); ctx.moveTo(sx-sw*0.4, skyH-ph+ph*0.06); ctx.lineTo(sx, skyH-ph); ctx.lineTo(sx+sw*0.2, skyH-ph+ph*0.10); ctx.closePath(); ctx.fill();
         }
-        // Alpine: ice/glacier streaks
         if (theme === 'alpine' && ph > 50) {
-          ctx.strokeStyle = 'rgba(200,220,248,0.35)'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(sx - bw*0.08, skyH - ph + ph*0.42); ctx.lineTo(sx - bw*0.18, skyH - ph + ph*0.72); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(sx + bw*0.06, skyH - ph + ph*0.36); ctx.lineTo(sx + bw*0.14, skyH - ph + ph*0.65); ctx.stroke();
+          ctx.strokeStyle = 'rgba(200,220,250,0.40)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(sx-bw*0.08, skyH-ph+ph*0.40); ctx.lineTo(sx-bw*0.20, skyH-ph+ph*0.72); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx+bw*0.06, skyH-ph+ph*0.35); ctx.lineTo(sx+bw*0.16, skyH-ph+ph*0.66); ctx.stroke();
+        }
+      }
+
+      // Mid ridgeline (extra layer between near mountains and hills)
+      const rngRl = makeRng(seed + 17);
+      for (let i = 0; i < 10; i++) {
+        const wx = rngRl() * W * 2.5;                                            // 1
+        const sx = ((wx - scrollPx * 0.14) % (W * 2.5) + W * 2.5) % (W * 2.5);
+        if (sx < -200 || sx > W + 200) { rngRl(); rngRl(); continue; }          // skip 2
+        const rh = (dramatic ? 35 : 20) + rngRl() * (dramatic ? 40 : 28);      // 1
+        const rw = 130 + rngRl() * 200;                                          // 1
+        const rlc = theme === 'alpine' ? '#101a28' : theme === 'mountain' ? '#1e3828' : '#2a5030';
+        ctx.fillStyle = rlc;
+        ctx.beginPath(); ctx.ellipse(sx, skyH + 6, rw, rh, 0, Math.PI, 0); ctx.fill();
+      }
+
+      // Alpine-specific: aurora borealis
+      if (theme === 'alpine') {
+        for (let band = 0; band < 3; band++) {
+          const aY = skyH * (0.18 + band * 0.22);
+          const aAlpha = 0.08 + band * 0.04;
+          const aG = ctx.createLinearGradient(0, aY - 12, 0, aY + 12);
+          const aColors = ['rgba(40,200,120,', 'rgba(40,120,200,', 'rgba(120,40,200,'];
+          aG.addColorStop(0, aColors[band]+'0)');
+          aG.addColorStop(0.5, aColors[band]+aAlpha+')');
+          aG.addColorStop(1, aColors[band]+'0)');
+          ctx.fillStyle = aG;
+          ctx.beginPath();
+          ctx.moveTo(0, aY);
+          for (let x = 0; x <= W; x += 40) {
+            const y = aY + Math.sin(x * 0.012 + scrollPx * 0.003 + band * 2) * 10;
+            ctx.lineTo(x, y);
+          }
+          ctx.lineTo(W, aY + 20); ctx.lineTo(0, aY + 20); ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Valley: farmhouse + wildflowers
+      if (theme === 'valley') {
+        const rngFm = makeRng(seed + 19);
+        for (let i = 0; i < 4; i++) {
+          const wx = rngFm() * W * 4;                                            // 1
+          const sx = ((wx - scrollPx * 0.35) % (W * 4) + W * 4) % (W * 4);
+          if (sx < -40 || sx > W + 40) { rngFm(); rngFm(); continue; }          // skip 2
+          const approxMi2 = offsetMi + sx * MI_PER_PX;
+          const py2 = elToY(elevAt(approxMi2));
+          const fs = 0.7 + rngFm() * 0.6;                                        // 1
+          const fc = rngFm() * 0;                                                 // 1 dummy
+          void fc;
+          // barn body
+          ctx.fillStyle = '#7a3020'; ctx.fillRect(sx-12*fs, py2-18*fs, 24*fs, 18*fs);
+          // roof
+          ctx.fillStyle = '#601808';
+          ctx.beginPath(); ctx.moveTo(sx-14*fs, py2-18*fs); ctx.lineTo(sx, py2-28*fs); ctx.lineTo(sx+14*fs, py2-18*fs); ctx.closePath(); ctx.fill();
+          // door
+          ctx.fillStyle = '#3a1808'; ctx.fillRect(sx-4*fs, py2-10*fs, 8*fs, 10*fs);
         }
       }
     }
 
-    // ── DESERT: mesa / butte silhouettes ─────────────────────────────────
+    // ── DESERT ────────────────────────────────────────────────────────────
     if (theme === 'desert') {
-      const rngMs = makeRng(seed + 2);
-      for (let i = 0; i < 7; i++) {
-        const wx  = rngMs() * W * 3.5;                                           // 1
-        const sx  = ((wx - scrollPx * 0.05) % (W * 3.5) + W * 3.5) % (W * 3.5);
-        if (sx < -120 || sx > W + 120) { rngMs(); rngMs(); continue; }          // skip 2
-        const mh  = 35 + rngMs() * 58;                                           // 1
-        const mw  = 70 + rngMs() * 130;                                          // 1
-        // Layered rock strata fill
+      // Heat shimmer near horizon
+      const shimG = ctx.createLinearGradient(0, skyH - 20, 0, skyH + 30);
+      shimG.addColorStop(0, 'rgba(210,160,60,0)');
+      shimG.addColorStop(0.5, 'rgba(220,170,70,0.20)');
+      shimG.addColorStop(1, 'rgba(200,140,50,0)');
+      ctx.fillStyle = shimG; ctx.fillRect(0, skyH - 20, W, 50);
+
+      // Far ghost mesas (very distant, pale)
+      const rngMsf = makeRng(seed + 22);
+      ctx.globalAlpha = 0.40;
+      for (let i = 0; i < 10; i++) {
+        const wx = rngMsf() * W * 5;                                             // 1
+        const sx = ((wx - scrollPx * 0.03) % (W * 5) + W * 5) % (W * 5);
+        if (sx < -100 || sx > W + 100) { rngMsf(); rngMsf(); continue; }        // skip 2
+        const mh = 20 + rngMsf() * 35;                                           // 1
+        const mw = 100 + rngMsf() * 200;                                          // 1
+        ctx.fillStyle = '#8a5838';
         ctx.beginPath();
-        ctx.moveTo(sx - mw/2, skyH + 2);
-        ctx.lineTo(sx - mw/2, skyH - mh + 12);
-        ctx.lineTo(sx - mw/2 + 10, skyH - mh);
-        ctx.lineTo(sx + mw/2 - 10, skyH - mh);
-        ctx.lineTo(sx + mw/2, skyH - mh + 12);
-        ctx.lineTo(sx + mw/2, skyH + 2);
-        ctx.closePath();
-        const dg = ctx.createLinearGradient(sx, skyH - mh, sx, skyH + 2);
-        dg.addColorStop(0, '#703820'); dg.addColorStop(0.4, '#9a4a28'); dg.addColorStop(1, '#b85a30');
+        ctx.moveTo(sx-mw/2, skyH+2); ctx.lineTo(sx-mw/2+8, skyH-mh);
+        ctx.lineTo(sx+mw/2-8, skyH-mh); ctx.lineTo(sx+mw/2, skyH+2); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Mid mesas (main layer, fully detailed)
+      const rngMs = makeRng(seed + 2);
+      for (let i = 0; i < 10; i++) {
+        const wx  = rngMs() * W * 3.2;                                           // 1
+        const sx  = ((wx - scrollPx * 0.06) % (W * 3.2) + W * 3.2) % (W * 3.2);
+        if (sx < -140 || sx > W + 140) { rngMs(); rngMs(); continue; }          // skip 2
+        const mh  = 40 + rngMs() * 68;                                           // 1
+        const mw  = 75 + rngMs() * 150;                                          // 1
+        ctx.beginPath();
+        ctx.moveTo(sx-mw/2, skyH+2); ctx.lineTo(sx-mw/2, skyH-mh+14);
+        ctx.lineTo(sx-mw/2+12, skyH-mh); ctx.lineTo(sx+mw/2-12, skyH-mh);
+        ctx.lineTo(sx+mw/2, skyH-mh+14); ctx.lineTo(sx+mw/2, skyH+2); ctx.closePath();
+        const dg = ctx.createLinearGradient(sx, skyH-mh, sx+mw*0.3, skyH+2);
+        dg.addColorStop(0, '#6a3018'); dg.addColorStop(0.35, '#9a4828'); dg.addColorStop(1, '#c06038');
         ctx.fillStyle = dg; ctx.fill();
-        // Rock strata lines
-        ctx.strokeStyle = 'rgba(180,80,30,0.5)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(sx - mw/2, skyH - mh*0.38); ctx.lineTo(sx + mw/2, skyH - mh*0.38); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx - mw/2, skyH - mh*0.62); ctx.lineTo(sx + mw/2, skyH - mh*0.62); ctx.stroke();
+        ctx.strokeStyle = 'rgba(160,70,30,0.55)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx-mw/2, skyH-mh*0.35); ctx.lineTo(sx+mw/2, skyH-mh*0.35); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx-mw/2, skyH-mh*0.60); ctx.lineTo(sx+mw/2, skyH-mh*0.60); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx-mw/2, skyH-mh*0.82); ctx.lineTo(sx+mw/2, skyH-mh*0.82); ctx.stroke();
+        // Mesa shadow side
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(sx-mw/2, skyH-mh+14, 8, mh-14);
+      }
+
+      // Near large rock formations
+      const rngRk = makeRng(seed + 23);
+      for (let i = 0; i < 8; i++) {
+        const wx = rngRk() * W * 2;                                              // 1
+        const sx = ((wx - scrollPx * 0.18) % (W * 2) + W * 2) % (W * 2);
+        if (sx < -50 || sx > W + 50) { rngRk(); rngRk(); continue; }            // skip 2
+        const approxMi2 = offsetMi + sx * MI_PER_PX;
+        const gy = elToY(elevAt(approxMi2));
+        const rh = 18 + rngRk() * 30;                                            // 1
+        const rw = 14 + rngRk() * 24;                                            // 1
+        const rkg = ctx.createLinearGradient(sx, gy-rh, sx+rw*0.4, gy);
+        rkg.addColorStop(0, '#b06030'); rkg.addColorStop(0.5, '#904828'); rkg.addColorStop(1, '#603018');
+        ctx.fillStyle = rkg;
+        ctx.beginPath();
+        ctx.moveTo(sx-rw/2, gy); ctx.lineTo(sx-rw/2+3, gy-rh*0.6);
+        ctx.lineTo(sx-rw*0.1, gy-rh); ctx.lineTo(sx+rw*0.3, gy-rh*0.8);
+        ctx.lineTo(sx+rw/2, gy-rh*0.3); ctx.lineTo(sx+rw/2, gy); ctx.closePath();
+        ctx.fill();
+      }
+
+      // Cracked earth texture on ground
+      ctx.strokeStyle = 'rgba(100,50,20,0.18)'; ctx.lineWidth = 0.8;
+      for (let s = 0; s <= STEPS; s += 8) {
+        const mi2 = visStart + s * stepMi;
+        const x2 = miToX(mi2), y2 = elToY(elevAt(mi2));
+        ctx.beginPath(); ctx.moveTo(x2+4, y2+4); ctx.lineTo(x2+10, y2+10); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x2+8, y2+3); ctx.lineTo(x2+3, y2+9); ctx.stroke();
       }
     }
 
-    // ── INTERSTATE: power line towers ────────────────────────────────────
+    // ── INTERSTATE ────────────────────────────────────────────────────────
     if (theme === 'interstate') {
+      // Flat crop fields (horizontal rows filling ground area)
+      const fieldColors = ['#5a7030','#4a6028','#6a7838','#7a8040'];
+      for (let row = 0; row < 8; row++) {
+        const fieldY = skyH + 6 + row * ((groundBot - skyH) / 8);
+        const fc2 = fieldColors[row % fieldColors.length];
+        ctx.fillStyle = fc2;
+        ctx.fillRect(0, fieldY, W, (groundBot - skyH) / 8 + 1);
+        // crop rows
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1;
+        const rowSpacing = 6 + row * 1.5;
+        for (let rr = 0; rr < W / rowSpacing; rr++) {
+          const lx = ((rr * rowSpacing - scrollPx * (0.5 + row * 0.08)) % W + W * 2) % W;
+          ctx.beginPath(); ctx.moveTo(lx, fieldY); ctx.lineTo(lx, fieldY + (groundBot - skyH) / 8); ctx.stroke();
+        }
+      }
+
+      // Water tower
+      const rngWt = makeRng(seed + 20);
+      for (let i = 0; i < 3; i++) {
+        const wx = rngWt() * W * 5;                                              // 1
+        const sx = ((wx - scrollPx * 0.55) % (W * 5) + W * 5) % (W * 5);
+        if (sx < -20 || sx > W + 20) { rngWt(); rngWt(); continue; }            // skip 2
+        const approxMi2 = offsetMi + sx * MI_PER_PX;
+        const py2 = elToY(elevAt(approxMi2));
+        const wts = 0.8 + rngWt() * 0.6;                                         // 1
+        const wtd = rngWt() * 0;                                                  // 1 dummy
+        void wtd;
+        const wh = 50 * wts;
+        // legs
+        ctx.strokeStyle = '#708090'; ctx.lineWidth = 2;
+        const legPts = [[-12,0],[12,0],[-8,-wh*0.55],[8,-wh*0.55]];
+        ctx.beginPath(); ctx.moveTo(sx+legPts[0][0]*wts, py2+legPts[0][1]); ctx.lineTo(sx+legPts[2][0]*wts, py2+legPts[2][1]); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx+legPts[1][0]*wts, py2+legPts[1][1]); ctx.lineTo(sx+legPts[3][0]*wts, py2+legPts[3][1]); ctx.stroke();
+        // cross brace
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(sx-10*wts, py2-wh*0.28); ctx.lineTo(sx+10*wts, py2-wh*0.42); ctx.stroke();
+        // tank
+        ctx.fillStyle = '#9ab0b8';
+        ctx.beginPath(); ctx.ellipse(sx, py2-wh*0.72, 14*wts, 16*wts, 0, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#7a9098'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#b0c8d0';
+        ctx.beginPath(); ctx.ellipse(sx, py2-wh*0.78, 14*wts, 5*wts, 0, 0, Math.PI*2); ctx.fill();
+      }
+
+      // Power lines with connecting wires
       const rngPL = makeRng(seed + 7);
-      for (let i = 0; i < 10; i++) {
-        const wx  = rngPL() * W * 2.2;                                           // 1
-        const sx  = ((wx - scrollPx * 0.88) % (W * 2.2) + W * 2.2) % (W * 2.2);
+      const polePositions: number[] = [];
+      for (let i = 0; i < 14; i++) {
+        const wx  = rngPL() * W * 2.0;                                           // 1
+        const sx  = ((wx - scrollPx * 0.90) % (W * 2.0) + W * 2.0) % (W * 2.0);
         if (sx < -15 || sx > W + 15) { rngPL(); rngPL(); continue; }            // skip 2
         const approxMi = offsetMi + sx * MI_PER_PX;
         const py = elToY(elevAt(approxMi));
-        const ph2 = 38 + rngPL() * 18;                                           // 1
-        const pw  = rngPL() * 0 + 14; // fixed width, use rng to consume call    // 1 (dummy)
-        ctx.strokeStyle = '#6a7080'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(sx, py - 2); ctx.lineTo(sx, py - ph2); ctx.stroke();
-        // crossbar
-        ctx.beginPath(); ctx.moveTo(sx - pw, py - ph2 + 6); ctx.lineTo(sx + pw, py - ph2 + 6); ctx.stroke();
-        // diagonal supports
+        const ph2 = 42 + rngPL() * 16;                                           // 1
+        const pw  = 14 + rngPL() * 0;                                            // 1 dummy
+        ctx.strokeStyle = '#787888'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(sx, py-2); ctx.lineTo(sx, py-ph2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx-pw, py-ph2+6); ctx.lineTo(sx+pw, py-ph2+6); ctx.stroke();
         ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(sx - pw, py - ph2 + 6); ctx.lineTo(sx - pw/2, py - ph2 + 16); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx + pw, py - ph2 + 6); ctx.lineTo(sx + pw/2, py - ph2 + 16); ctx.stroke();
-        // insulators
+        ctx.beginPath(); ctx.moveTo(sx-pw, py-ph2+6); ctx.lineTo(sx-pw*0.5, py-ph2+18); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx+pw, py-ph2+6); ctx.lineTo(sx+pw*0.5, py-ph2+18); ctx.stroke();
         ctx.fillStyle = '#909898';
-        ctx.beginPath(); ctx.arc(sx - pw, py - ph2 + 6, 2, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx + pw, py - ph2 + 6, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx-pw, py-ph2+6, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+pw, py-ph2+6, 2, 0, Math.PI*2); ctx.fill();
+        polePositions.push(sx, py - ph2 + 6);
       }
-      // Interstate: far flat horizon (gentle hills instead of mountains)
-      const rngH2 = makeRng(seed + 2);
-      ctx.globalAlpha = 0.30;
-      for (let i = 0; i < 5; i++) {
-        const wx = rngH2() * W * 5;                                              // 1
+      // Draw wires between consecutive poles
+      ctx.strokeStyle = 'rgba(80,85,100,0.55)'; ctx.lineWidth = 0.8;
+      for (let p = 0; p < polePositions.length - 2; p += 2) {
+        const x1 = polePositions[p], y1 = polePositions[p+1];
+        const x2 = polePositions[p+2], y2 = polePositions[p+3];
+        if (Math.abs(x2 - x1) < 250) {
+          const mx = (x1 + x2) / 2, my = Math.max(y1, y2) + 5;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(mx, my, x2, y2); ctx.stroke();
+        }
+      }
+
+      // Grain silos
+      const rngSi = makeRng(seed + 21);
+      for (let i = 0; i < 4; i++) {
+        const wx = rngSi() * W * 6;                                              // 1
+        const sx = ((wx - scrollPx * 0.42) % (W * 6) + W * 6) % (W * 6);
+        if (sx < -20 || sx > W + 20) { rngSi(); rngSi(); continue; }            // skip 2
+        const approxMi2 = offsetMi + sx * MI_PER_PX;
+        const py2 = elToY(elevAt(approxMi2));
+        const ss = 0.6 + rngSi() * 0.7;                                          // 1
+        const nd = rngSi() * 0; void nd;                                          // 1 dummy
+        const sw2 = 10 * ss, sh = 35 * ss;
+        // two cylinders
+        for (let s2 = 0; s2 < 2; s2++) {
+          const ox = (s2 - 0.5) * sw2 * 2.2;
+          const sg2 = ctx.createLinearGradient(sx+ox-sw2, py2-sh, sx+ox+sw2, py2);
+          sg2.addColorStop(0, '#b0b890'); sg2.addColorStop(0.4, '#d0d8b0'); sg2.addColorStop(1, '#909878');
+          ctx.fillStyle = sg2;
+          ctx.beginPath(); ctx.ellipse(sx+ox, py2-sh/2, sw2, sh/2, 0, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = '#808870'; ctx.lineWidth = 0.8; ctx.stroke();
+          // cone top
+          ctx.fillStyle = '#808060';
+          ctx.beginPath(); ctx.moveTo(sx+ox-sw2, py2-sh); ctx.lineTo(sx+ox, py2-sh-10*ss); ctx.lineTo(sx+ox+sw2, py2-sh); ctx.closePath(); ctx.fill();
+        }
+      }
+
+      // Flat horizon line
+      const rngHz = makeRng(seed + 2);
+      ctx.globalAlpha = 0.28;
+      for (let i = 0; i < 6; i++) {
+        const wx = rngHz() * W * 5;                                              // 1
         const sx = ((wx - scrollPx * 0.03) % (W * 5) + W * 5) % (W * 5);
-        if (sx < -200 || sx > W + 200) { rngH2(); rngH2(); continue; }          // skip 2
-        const rw = 200 + rngH2() * 250;                                          // 1
-        const rh = 10 + rngH2() * 15;                                            // 1
-        ctx.fillStyle = '#4878a0';
-        ctx.beginPath(); ctx.ellipse(sx, skyH + 4, rw, rh, 0, Math.PI, 0); ctx.fill();
+        if (sx < -200 || sx > W + 200) { rngHz(); rngHz(); continue; }          // skip 2
+        const rw = 180 + rngHz() * 280;                                          // 1
+        const rh = 8  + rngHz() * 12;                                            // 1
+        ctx.fillStyle = '#5888a8';
+        ctx.beginPath(); ctx.ellipse(sx, skyH+3, rw, rh, 0, Math.PI, 0); ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
