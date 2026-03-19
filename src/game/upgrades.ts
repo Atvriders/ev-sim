@@ -114,7 +114,7 @@ export const UPGRADES: Upgrade[] = [
   {
     id: 'adaptive_cruise',
     name: 'Adaptive Cruise Control',
-    desc: 'Automatically matches your target speed to the posted speed limit — floors it when the limit rises, backs off before zones.',
+    desc: 'Automatically drives 5 mph over the posted speed limit — stays in the tolerance zone so you never get a speeding fine.',
     price: 950,
     efficiencyBonus: 0,
     regenBonus: 0,

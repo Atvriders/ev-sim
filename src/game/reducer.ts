@@ -264,8 +264,8 @@ export function reducer(state: GameState, action: Action): GameState {
         return lim;
       }, 65);
       const hasAdaptiveCruise = state.upgrades.includes('adaptive_cruise');
-      // Adaptive Cruise drives at the limit; otherwise user can go as fast as they want
-      const userTarget = hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph;
+      // Adaptive Cruise drives at limit+5 (tolerance zone, no fine); otherwise user sets their own target
+      const userTarget = hasAdaptiveCruise ? currentSpeedLimit + 5 : state.targetSpeedMph;
       const updates  = physicsTick(
         { ...state, targetSpeedMph: userTarget },
         car, route?.terrain ?? [], upgrades, deltaS
