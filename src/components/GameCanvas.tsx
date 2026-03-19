@@ -349,7 +349,7 @@ export default function GameCanvas({ state }: Props) {
     const maxEl    = Math.max(...elevs);
     const elRange  = Math.max(maxEl - minEl, 100);
     const skyH     = H * 0.42;
-    const groundBot = H * 0.80;
+    const groundBot = H * 0.60;
 
     function elToY(el: number) {
       return skyH + (1 - (el - minEl) / elRange) * (groundBot - skyH);
@@ -1513,25 +1513,12 @@ export default function GameCanvas({ state }: Props) {
       ctx.fillStyle = gndG;
       ctx.fillRect(0, 0, W, H);
 
-      // Wavy strata horizon lines (scroll gently with the world)
-      const stOff = (scrollPx * 0.08) % 200;
-      const strataFracs  = [0.25, 0.52, 0.76];
-      const strataGlows  = ['rgba(255,245,200,0.08)', 'rgba(255,230,170,0.06)', 'rgba(220,200,140,0.04)'];
-      ctx.lineWidth = 1.5;
-      for (let li = 0; li < strataFracs.length; li++) {
-        const baseY = groundBot + strataFracs[li] * (H - groundBot);
-        ctx.strokeStyle = strataGlows[li];
-        ctx.beginPath();
-        for (let x = 0; x <= W + 4; x += 3) {
-          const wy = baseY
-            + Math.sin((x + stOff) * 0.048 + li * 1.9 + seed * 0.02) * 3.5
-            + Math.sin((x + stOff) * 0.016 + li * 0.8) * 5.5;
-          x === 0 ? ctx.moveTo(x, wy) : ctx.lineTo(x, wy);
-        }
-        ctx.stroke();
-        // Thin shadow band below each horizon to separate layers
-        ctx.fillStyle = 'rgba(0,0,0,0.14)';
-        ctx.fillRect(0, baseY + 1.5, W, 4);
+      // Subtle straight strata bands (no waves)
+      const strataFracs = [0.25, 0.52, 0.76];
+      for (const frac of strataFracs) {
+        const baseY = groundBot + frac * (H - groundBot);
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.fillRect(0, baseY, W, 3);
       }
 
       // Embedded rocks / pebbles (world-space so they scroll with the road)
@@ -1561,10 +1548,10 @@ export default function GameCanvas({ state }: Props) {
 
       // ── Buried items: bones, cars, trash, fossils, etc. ────────────────────
       const rngBury = makeRng(seed + 0xc0ffee);
-      for (let bi = 0; bi < 60; bi++) {
+      for (let bi = 0; bi < 130; bi++) {
         const bmi   = rngBury() * (distTotal + 4) - 2;
         const depth = 0.10 + rngBury() * 0.78;
-        const itype = Math.floor(rngBury() * 11);
+        const itype = Math.floor(rngBury() * 30);
         const sc    = 0.65 + rngBury() * 0.85;
         const tilt  = (rngBury() - 0.5) * 1.2;
         const alpha = 0.22 + rngBury() * 0.28;
@@ -1688,22 +1675,269 @@ export default function GameCanvas({ state }: Props) {
             ctx.beginPath(); ctx.moveTo(-3*sc, -2*sc); ctx.lineTo(3*sc, -2*sc); ctx.stroke();
             break;
           }
-          case 10: { // Shopping cart (top-down / side)
+          case 10: { // Shopping cart
             ctx.strokeStyle = '#606060'; ctx.lineWidth = 1.5;
             ctx.strokeRect(-8*sc, -5*sc, 16*sc, 9*sc);
-            // Grid lines
             ctx.lineWidth = 0.7;
             ctx.beginPath(); ctx.moveTo(-8*sc, -1*sc); ctx.lineTo(8*sc, -1*sc); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-8*sc, 3*sc); ctx.lineTo(8*sc, 3*sc); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(-2*sc, -5*sc); ctx.lineTo(-2*sc, 4*sc); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(2*sc, -5*sc); ctx.lineTo(2*sc, 4*sc); ctx.stroke();
-            // Handle
             ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(-8*sc, -5*sc); ctx.lineTo(-10*sc, -7*sc); ctx.lineTo(10*sc, -7*sc); ctx.lineTo(8*sc, -5*sc); ctx.stroke();
-            // Wheels
             ctx.fillStyle = '#505050';
             ctx.beginPath(); ctx.arc(-6*sc, 4.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(6*sc, 4.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 11: { // Spine / vertebrae stack
+            ctx.fillStyle = '#c8b080';
+            ctx.fillRect(-1*sc, -13*sc, 2*sc, 26*sc);
+            for (let v = -10; v <= 10; v += 4) {
+              ctx.beginPath(); ctx.ellipse(0, v*sc, 3.5*sc, 2*sc, 0, 0, Math.PI*2); ctx.fill();
+              ctx.fillRect(-0.8*sc, (v-1)*sc, 5*sc, 1.5*sc);
+            }
+            break;
+          }
+          case 12: { // Full rib cage
+            ctx.strokeStyle = '#c0aa80'; ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.moveTo(0, -11*sc); ctx.lineTo(0, 11*sc); ctx.stroke();
+            ctx.lineWidth = 1.1;
+            for (let r = -9; r <= 7; r += 4) {
+              ctx.beginPath(); ctx.moveTo(0, r*sc);
+              ctx.bezierCurveTo(-6*sc, (r+1)*sc, -11*sc, (r+4)*sc, -8*sc, (r+7)*sc); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(0, r*sc);
+              ctx.bezierCurveTo(6*sc, (r+1)*sc, 11*sc, (r+4)*sc, 8*sc, (r+7)*sc); ctx.stroke();
+            }
+            break;
+          }
+          case 13: { // Buried bus
+            ctx.fillStyle = '#263038';
+            ctx.fillRect(-22*sc, -5*sc, 44*sc, 10*sc);
+            ctx.fillStyle = '#141e24';
+            for (let w = -18; w <= 14; w += 8)
+              ctx.fillRect(w*sc, -4.5*sc, 6*sc, 5*sc);
+            ctx.fillStyle = '#0a1218';
+            ctx.beginPath(); ctx.arc(-14*sc, 5.5*sc, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(14*sc, 5.5*sc, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#1a2830';
+            ctx.beginPath(); ctx.arc(-14*sc, 5.5*sc, 1.8*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(14*sc, 5.5*sc, 1.8*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 14: { // Oil drum
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.ellipse(0, 0, 6*sc, 9*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#303030'; ctx.lineWidth = 1;
+            for (let b = -6; b <= 6; b += 3) {
+              ctx.beginPath(); ctx.ellipse(0, b*sc, 6*sc, 1.5*sc, 0, 0, Math.PI*2); ctx.stroke();
+            }
+            ctx.strokeStyle = 'rgba(200,140,0,0.45)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-4*sc, -5*sc); ctx.lineTo(4*sc, 5*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(4*sc, -5*sc); ctx.lineTo(-4*sc, 5*sc); ctx.stroke();
+            break;
+          }
+          case 15: { // Washing machine
+            ctx.fillStyle = '#262630';
+            ctx.beginPath(); ctx.roundRect(-9*sc, -9*sc, 18*sc, 18*sc, 1.5); ctx.fill();
+            ctx.fillStyle = '#161620';
+            ctx.beginPath(); ctx.arc(0, 1*sc, 6*sc, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#303040'; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.arc(0, 1*sc, 7*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle = '#303040';
+            ctx.beginPath(); ctx.arc(4*sc, -6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(6*sc, -6*sc, 1.2*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 16: { // T-Rex skull
+            ctx.fillStyle = '#b8985a';
+            ctx.beginPath(); ctx.ellipse(-3*sc, -1*sc, 9*sc, 6*sc, -0.15, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(3*sc, -2*sc); ctx.lineTo(17*sc, -4*sc); ctx.lineTo(17*sc, 2*sc); ctx.lineTo(3*sc, 2*sc); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.ellipse(-1*sc, -3*sc, 3.2*sc, 2.6*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#c8b070';
+            for (let t = 5; t <= 15; t += 2.5) {
+              ctx.beginPath(); ctx.moveTo(t*sc, 2*sc); ctx.lineTo((t+0.8)*sc, 5.5*sc); ctx.lineTo((t+1.8)*sc, 2*sc); ctx.closePath(); ctx.fill();
+            }
+            ctx.fillStyle = '#a87840';
+            for (let t = 6; t <= 15; t += 2.5) {
+              ctx.beginPath(); ctx.moveTo(t*sc, -2*sc); ctx.lineTo((t+0.8)*sc, -5.5*sc); ctx.lineTo((t+1.8)*sc, -2*sc); ctx.closePath(); ctx.fill();
+            }
+            break;
+          }
+          case 17: { // Gold coin pile
+            ctx.fillStyle = '#a07808';
+            for (let ci = 0; ci < 6; ci++) {
+              const cx2 = (ci - 2.5) * 4 * sc;
+              const cy2 = (ci % 2) * 2 * sc;
+              ctx.beginPath(); ctx.ellipse(cx2, cy2, 3.5*sc, 1.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = '#d4a010';
+            for (let ci = 0; ci < 4; ci++) {
+              const cx2 = (ci - 1.5) * 4.5 * sc;
+              ctx.beginPath(); ctx.ellipse(cx2, -3*sc, 3.5*sc, 1.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.fillStyle = '#f0c030';
+            ctx.beginPath(); ctx.ellipse(0, -6*sc, 3.5*sc, 1.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 18: { // Diamond / gem
+            ctx.fillStyle = '#70d8ff';
+            ctx.beginPath();
+            ctx.moveTo(0, -8*sc); ctx.lineTo(7*sc, -2*sc); ctx.lineTo(7*sc, 4*sc);
+            ctx.lineTo(0, 8*sc); ctx.lineTo(-7*sc, 4*sc); ctx.lineTo(-7*sc, -2*sc); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.30)';
+            ctx.beginPath(); ctx.moveTo(0, -8*sc); ctx.lineTo(7*sc, -2*sc); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(0, -8*sc); ctx.lineTo(0, 8*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-7*sc, -2*sc); ctx.lineTo(7*sc, -2*sc); ctx.stroke();
+            break;
+          }
+          case 19: { // Anchor
+            ctx.strokeStyle = '#404840'; ctx.lineWidth = 2.2*sc;
+            ctx.beginPath(); ctx.moveTo(0, -11*sc); ctx.lineTo(0, 9*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-7*sc, -8*sc); ctx.lineTo(7*sc, -8*sc); ctx.stroke();
+            ctx.lineWidth = 1.8*sc;
+            ctx.beginPath(); ctx.arc(-7*sc, 5*sc, 4.5*sc, Math.PI*0.5, Math.PI*1.5); ctx.stroke();
+            ctx.beginPath(); ctx.arc(7*sc, 5*sc, 4.5*sc, -Math.PI*0.5, Math.PI*0.5); ctx.stroke();
+            ctx.lineWidth = 1.5*sc;
+            ctx.beginPath(); ctx.arc(0, -11*sc, 2.5*sc, 0, Math.PI*2); ctx.stroke();
+            break;
+          }
+          case 20: { // Bicycle
+            ctx.strokeStyle = '#484840'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(-9*sc, 2*sc, 6*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(9*sc, 2*sc, 6*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-9*sc, 2*sc); ctx.lineTo(0, -5*sc); ctx.lineTo(9*sc, 2*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-9*sc, 2*sc); ctx.lineTo(-3*sc, -2*sc); ctx.lineTo(0, -5*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-3*sc, -2*sc); ctx.lineTo(-4*sc, -7*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-6*sc, -7*sc); ctx.lineTo(-2*sc, -7*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(9*sc, -1*sc); ctx.lineTo(9*sc, -6*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(7*sc, -6*sc); ctx.lineTo(11*sc, -6*sc); ctx.stroke();
+            break;
+          }
+          case 21: { // Suitcase
+            ctx.fillStyle = '#3c2010';
+            ctx.beginPath(); ctx.roundRect(-11*sc, -7*sc, 22*sc, 14*sc, 2); ctx.fill();
+            ctx.strokeStyle = '#604030'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-11*sc, 0); ctx.lineTo(11*sc, 0); ctx.stroke();
+            ctx.fillStyle = '#604030';
+            for (const [cx2, cy2] of [[-11,-7],[-11,7],[11,-7],[11,7]] as [number,number][])
+              ctx.fillRect(cx2*sc - 1.2, cy2*sc - 1.2, 2.4, 2.4);
+            ctx.strokeStyle = '#705038'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(-3*sc, -7*sc); ctx.lineTo(-3*sc, -11*sc); ctx.lineTo(3*sc, -11*sc); ctx.lineTo(3*sc, -7*sc); ctx.stroke();
+            ctx.fillStyle = '#907050';
+            ctx.fillRect(-2.5*sc, -2.5*sc, 5*sc, 3*sc);
+            break;
+          }
+          case 22: { // Vault / safe
+            ctx.fillStyle = '#18181e';
+            ctx.fillRect(-10*sc, -10*sc, 20*sc, 20*sc);
+            ctx.strokeStyle = '#383840'; ctx.lineWidth = 1;
+            ctx.strokeRect(-10*sc, -10*sc, 20*sc, 20*sc);
+            ctx.strokeStyle = '#585860'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(0, 0, 6*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(4.5*sc, 0); ctx.stroke();
+            ctx.strokeStyle = '#808080'; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(8.5*sc, -3*sc); ctx.lineTo(8.5*sc, 3*sc); ctx.stroke();
+            ctx.fillStyle = '#484850';
+            ctx.fillRect(-10*sc, -9*sc, 2.5*sc, 3.5*sc);
+            ctx.fillRect(-10*sc, 5.5*sc, 2.5*sc, 3.5*sc);
+            break;
+          }
+          case 23: { // Buried tank
+            ctx.fillStyle = '#2a3020';
+            ctx.beginPath(); ctx.ellipse(0, 3*sc, 17*sc, 6*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(-2*sc, -3*sc, 8*sc, 5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(-2*sc, -4*sc, 22*sc, 2.5*sc);
+            ctx.strokeStyle = '#1a2018'; ctx.lineWidth = 3.5;
+            ctx.beginPath(); ctx.arc(-13*sc, 5*sc, 4*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(13*sc, 5*sc, 4*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = '#1e2820'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-13*sc, 9*sc); ctx.lineTo(13*sc, 9*sc); ctx.stroke();
+            break;
+          }
+          case 24: { // Crashed alien spacecraft
+            ctx.fillStyle = '#2a3848';
+            ctx.beginPath(); ctx.ellipse(0, 1*sc, 16*sc, 4.5*sc, 0.2, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#3a4a5a';
+            ctx.beginPath(); ctx.ellipse(-2*sc, -2*sc, 5.5*sc, 3.5*sc, 0.2, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = 'rgba(255,100,0,0.55)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-2*sc, 0); ctx.lineTo(-13*sc, 7*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-2*sc, 0); ctx.lineTo(10*sc, 8*sc); ctx.stroke();
+            ctx.fillStyle = 'rgba(0,255,160,0.45)';
+            for (let p = -10; p <= 10; p += 4)
+              { ctx.beginPath(); ctx.arc(p*sc, 1.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill(); }
+            ctx.fillStyle = 'rgba(0,200,255,0.30)';
+            ctx.beginPath(); ctx.arc(-2*sc, -3*sc, 3*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 25: { // Crown
+            ctx.fillStyle = '#b09020';
+            ctx.fillRect(-9*sc, 1*sc, 18*sc, 5*sc);
+            ctx.beginPath();
+            ctx.moveTo(-9*sc, 1*sc); ctx.lineTo(-6*sc, -7*sc); ctx.lineTo(-3*sc, -2*sc);
+            ctx.lineTo(0, -9.5*sc); ctx.lineTo(3*sc, -2*sc); ctx.lineTo(6*sc, -7*sc);
+            ctx.lineTo(9*sc, 1*sc); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#cc1818'; ctx.beginPath(); ctx.arc(0, -5*sc, 2*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#2060e0'; ctx.beginPath(); ctx.arc(-5.5*sc, -4*sc, 1.4*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#2060e0'; ctx.beginPath(); ctx.arc(5.5*sc, -4*sc, 1.4*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#d0a828';
+            ctx.beginPath(); ctx.arc(-1.5*sc, 3.5*sc, 1*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(1.5*sc, 3.5*sc, 1*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 26: { // Underground pipe network
+            ctx.strokeStyle = '#505040'; ctx.lineWidth = 3.5*sc;
+            ctx.beginPath(); ctx.moveTo(-15*sc, 0); ctx.lineTo(15*sc, 0); ctx.stroke();
+            ctx.lineWidth = 2.5*sc;
+            ctx.beginPath(); ctx.moveTo(-8*sc, 0); ctx.lineTo(-8*sc, -9*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(5*sc, 0); ctx.lineTo(5*sc, 7*sc); ctx.stroke();
+            ctx.lineWidth = 2*sc;
+            ctx.beginPath(); ctx.moveTo(-8*sc, -9*sc); ctx.lineTo(2*sc, -9*sc); ctx.stroke();
+            ctx.fillStyle = '#706050';
+            ctx.beginPath(); ctx.arc(-8*sc, 0, 3*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(5*sc, 0, 3*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-8*sc, -9*sc, 2.5*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 27: { // Old television
+            ctx.fillStyle = '#252020';
+            ctx.beginPath(); ctx.roundRect(-11*sc, -9*sc, 22*sc, 17*sc, 2); ctx.fill();
+            ctx.fillStyle = '#0e1820';
+            ctx.fillRect(-8*sc, -7*sc, 13*sc, 11*sc);
+            ctx.fillStyle = 'rgba(180,180,200,0.06)';
+            ctx.fillRect(-8*sc, -7*sc, 13*sc, 5*sc);
+            ctx.fillStyle = '#353030';
+            ctx.beginPath(); ctx.arc(7*sc, -3*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(7*sc, 2*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#484040'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(-2*sc, -9*sc); ctx.lineTo(-5*sc, -15*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2*sc, -9*sc); ctx.lineTo(5*sc, -15*sc); ctx.stroke();
+            break;
+          }
+          case 28: { // Pterodactyl fossil (wings spread)
+            ctx.fillStyle = '#b09070';
+            ctx.beginPath(); ctx.ellipse(0, 0, 4.5*sc, 2.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(4.5*sc, -1*sc); ctx.lineTo(16*sc, -4*sc); ctx.lineTo(16*sc, 1*sc); ctx.lineTo(4.5*sc, 1*sc); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-3*sc, -1*sc); ctx.lineTo(-20*sc, -11*sc); ctx.lineTo(-17*sc, -5*sc); ctx.lineTo(-15*sc, 3*sc); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-3*sc, -1*sc); ctx.lineTo(2*sc, -13*sc); ctx.lineTo(6*sc, -8*sc); ctx.lineTo(4.5*sc, 0); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#c0a880'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-4*sc, 2*sc); ctx.lineTo(-7*sc, 9*sc); ctx.lineTo(-5*sc, 9.5*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 2.5*sc); ctx.lineTo(0, 9*sc); ctx.lineTo(2*sc, 9.5*sc); ctx.stroke();
+            break;
+          }
+          case 29: { // Buried submarine
+            ctx.fillStyle = '#1a2830';
+            ctx.beginPath(); ctx.ellipse(0, 5*sc, 15*sc, 5.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(-3.5*sc, -6*sc, 7*sc, 11*sc);
+            ctx.fillRect(-1.5*sc, -13*sc, 3*sc, 8*sc);
+            ctx.fillRect(-1.5*sc, -13*sc, 5*sc, 2*sc);
+            ctx.strokeStyle = '#304858'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(-6*sc, 3*sc, 2.8*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(6*sc, 3*sc, 2.8*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = '#283848'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(-15*sc, 5*sc); ctx.lineTo(15*sc, 5*sc); ctx.stroke();
             break;
           }
         }
