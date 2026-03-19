@@ -151,7 +151,7 @@ export function physicsTick(
   const { speedMph, targetSpeedMph, battery, positionMi } = state;
 
   // Speed adjustment — 0-60 in car.zeroToSixty seconds → ~60/z mph/s
-  const maxAccelMphS  = 60 / car.zeroToSixty;
+  const maxAccelMphS  = (60 / car.zeroToSixty) * 3; // 3× game-feel multiplier
   const maxBrakeMphS  = 18;   // comfortable decel
   const diff          = targetSpeedMph - speedMph;
   const accelMphS     = diff > 0

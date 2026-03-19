@@ -292,7 +292,8 @@ export default function GameCanvas({ state }: Props) {
     const route = state.currentRoute ? getRoute(state.currentRoute) : null;
 
     // ── IDLE STATE ────────────────────────────────────────────────────────────
-    if (!route || !state.driving) {
+    // Show route canvas if route just completed (driving=false but routeComplete=true)
+    if (!route || (!state.driving && !state.routeComplete)) {
       const sky = ctx.createLinearGradient(0, 0, 0, H * 0.58);
       sky.addColorStop(0, '#0d3a7a'); sky.addColorStop(0.6, '#2d7ab8'); sky.addColorStop(1, '#90c8e8');
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
@@ -1503,38 +1504,42 @@ export default function GameCanvas({ state }: Props) {
 
       ctx.restore();
     }
-    // Gravel/dirt shoulder (widest layer)
-    terrainPath(0); ctx.strokeStyle = theme === 'desert' ? '#6a4420' : theme === 'city' ? '#383830' : '#3a3828'; ctx.lineWidth = 36; ctx.stroke();
+    // Gravel/dirt shoulder (widest layer) — 4-lane road
+    terrainPath(0); ctx.strokeStyle = theme === 'desert' ? '#6a4420' : theme === 'city' ? '#383830' : '#3a3828'; ctx.lineWidth = 54; ctx.stroke();
     // White edge rumble strip (each side)
-    terrainPath(-16); ctx.strokeStyle = 'rgba(230,225,215,0.55)'; ctx.lineWidth = 2; ctx.stroke();
-    terrainPath(16);  ctx.strokeStyle = 'rgba(230,225,215,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+    terrainPath(-25); ctx.strokeStyle = 'rgba(230,225,215,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+    terrainPath(25);  ctx.strokeStyle = 'rgba(230,225,215,0.45)'; ctx.lineWidth = 2; ctx.stroke();
     // Asphalt surface
-    terrainPath(0); ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 28; ctx.stroke();
-    terrainPath(0); ctx.strokeStyle = '#242430'; ctx.lineWidth = 22; ctx.stroke();
-    // Subtle asphalt texture (lighter center strip)
+    terrainPath(0); ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 50; ctx.stroke();
+    terrainPath(0); ctx.strokeStyle = '#242430'; ctx.lineWidth = 44; ctx.stroke();
+    // Subtle asphalt texture
     terrainPath(0); ctx.strokeStyle = 'rgba(40,40,52,0.50)'; ctx.lineWidth = 8; ctx.stroke();
-    // Edge lines (solid white, each shoulder)
-    terrainPath(-10); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
-    terrainPath(10);  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
-    // Center lane dash (yellow)
-    terrainPath(-1);  ctx.strokeStyle = '#e8c030'; ctx.lineWidth = 2; ctx.setLineDash([18,14]); ctx.stroke();
+    // Outer edge lines (solid white)
+    terrainPath(-22); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
+    terrainPath(22);  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Inner lane dividers (white dashes) — same-direction lane splits
+    terrainPath(-11); ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
+    terrainPath(11);  ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
     ctx.setLineDash([]);
-    // Mountain/alpine: guard rail on uphill side
+    // Double center yellow line (divides oncoming traffic directions)
+    terrainPath(-2);  ctx.strokeStyle = '#e8c030'; ctx.lineWidth = 1.5; ctx.stroke();
+    terrainPath(2);   ctx.strokeStyle = '#e8c030'; ctx.lineWidth = 1.5; ctx.stroke();
+    // Mountain/alpine: guard rail on uphill side (outside wider road)
     if (theme === 'mountain' || theme === 'alpine') {
       ctx.strokeStyle = 'rgba(180,185,200,0.55)'; ctx.lineWidth = 2;
-      terrainPath(-19); ctx.stroke();
+      terrainPath(-28); ctx.stroke();
       // Posts
       for (let s = 4; s < STEPS; s += 10) {
         const mi2 = visStart + s * stepMi;
         const gx = miToX(mi2), gy2 = elToY(elevAt(mi2));
         ctx.strokeStyle = 'rgba(160,165,180,0.70)'; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.moveTo(gx, gy2 - 12); ctx.lineTo(gx, gy2 - 22); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy2 - 21); ctx.lineTo(gx, gy2 - 31); ctx.stroke();
       }
     }
     // City: raised concrete curb lines
     if (theme === 'city') {
-      terrainPath(-16); ctx.strokeStyle = 'rgba(200,198,190,0.60)'; ctx.lineWidth = 3; ctx.stroke();
-      terrainPath(16);  ctx.strokeStyle = 'rgba(200,198,190,0.50)'; ctx.lineWidth = 3; ctx.stroke();
+      terrainPath(-24); ctx.strokeStyle = 'rgba(200,198,190,0.60)'; ctx.lineWidth = 3; ctx.stroke();
+      terrainPath(24);  ctx.strokeStyle = 'rgba(200,198,190,0.50)'; ctx.lineWidth = 3; ctx.stroke();
     }
     // Destination landmark at route END
     {
@@ -1587,18 +1592,18 @@ export default function GameCanvas({ state }: Props) {
         const v  = Math.abs(Math.sin(s * 1.7 + seed * 0.001));   // deterministic variation
         if (theme === 'desert') {
           ctx.fillStyle = `rgba(145,88,45,${0.28 + v * 0.22})`;
-          ctx.beginPath(); ctx.ellipse(x, y + 21, 2.5 + v * 2.5, 1.3, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(x, y + 29, 2.5 + v * 2.5, 1.3, 0, 0, Math.PI * 2); ctx.fill();
         } else if (theme === 'alpine') {
           ctx.fillStyle = `rgba(108,104,88,${0.32 + v * 0.20})`;
-          ctx.fillRect(x - 1, y + 19, 3 + Math.floor(v * 4), 2);
+          ctx.fillRect(x - 1, y + 27, 3 + Math.floor(v * 4), 2);
         } else {
           const gc = theme === 'city' ? `rgba(52,74,42,0.48)` : `rgba(65,122,46,0.52)`;
           ctx.strokeStyle = gc; ctx.lineWidth = 1.1;
           const h = 4 + v * 5;
-          ctx.beginPath(); ctx.moveTo(x - 1, y + 20); ctx.lineTo(x - 2 - v, y + 20 - h); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(x + 1, y + 20); ctx.lineTo(x + 2 + v * 0.5, y + 20 - h * 0.85); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x - 1, y + 28); ctx.lineTo(x - 2 - v, y + 28 - h); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x + 1, y + 28); ctx.lineTo(x + 2 + v * 0.5, y + 28 - h * 0.85); ctx.stroke();
           if (v > 0.62) {
-            ctx.beginPath(); ctx.moveTo(x, y + 20); ctx.lineTo(x + v * 3, y + 20 - h * 0.70); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x, y + 28); ctx.lineTo(x + v * 3, y + 28 - h * 0.70); ctx.stroke();
           }
         }
       }
@@ -1705,6 +1710,59 @@ export default function GameCanvas({ state }: Props) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // 8.5 ── ROAD TRAFFIC (same-direction + oncoming)
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      const TC_IDS  = ['tesla_m3_rwd','hyundai_ioniq5','chevy_bolt','kia_soul_ev','ford_mache','tesla_my','vw_id4','audi_etron_gt','chevy_bolt_2017','nissan_ariya'];
+      const TC_COLS = ['#c62b2b','#2b7ac6','#e0e0e4','#c6a02b','#2a7a3a','#8b2bc6','#cc6020','#404060','#a0a0c0','#b84040','#3a80a8'];
+      // Wheel spin tied to player's scroll (approximate matching speed)
+      const trafficWA = (scrollPx / (Math.PI * WR * 2 / 12)) % (Math.PI * 2);
+
+      // ── Same-direction traffic (right lanes, slightly slower → player overtakes) ──
+      const rngTraf = makeRng(seed + 0xaa0011);
+      for (let i = 0; i < 6; i++) {
+        const baseX  = rngTraf() * W * 5;                        // 1
+        const laneR  = rngTraf();                                 // 2  lane selector
+        const carIdx = Math.floor(rngTraf() * TC_IDS.length);    // 3
+        const colIdx = Math.floor(rngTraf() * TC_COLS.length);   // 4
+        const lane   = laneR < 0.5 ? 6 : 17;  // right inner or outer lane Y offset
+        const sx     = ((baseX - scrollPx * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        if (sx < -60 || sx > W + 60) continue;
+        if (Math.abs(sx - carScreenX) < 55) continue; // don't overlap player
+        const approxMi = offsetMi + sx * MI_PER_PX;
+        const ty = elToY(elevAt(approxMi)) + lane;
+        ctx.save();
+        ctx.translate(sx, ty);
+        ctx.beginPath(); ctx.ellipse(0, 2, 34, 5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill();
+        drawCarByStyle(ctx, TC_IDS[carIdx], TC_COLS[colIdx], trafficWA);
+        ctx.restore();
+      }
+
+      // ── Oncoming traffic (left lanes, approaching from the right) ────────────
+      const rngOnc = makeRng(seed + 0xbb0022);
+      for (let i = 0; i < 6; i++) {
+        const baseX  = rngOnc() * W * 5;                        // 1
+        const laneR  = rngOnc();                                 // 2  lane selector
+        const carIdx = Math.floor(rngOnc() * TC_IDS.length);    // 3
+        const colIdx = Math.floor(rngOnc() * TC_COLS.length);   // 4
+        const lane   = laneR < 0.5 ? -6 : -17; // left inner or outer lane Y offset
+        // +scrollPx makes them scroll rightward in screen (coming from right)
+        const sx = ((baseX + scrollPx * 1.08) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        if (sx < -60 || sx > W + 60) continue;
+        const approxMi = offsetMi + sx * MI_PER_PX;
+        const ty = elToY(elevAt(approxMi)) + lane;
+        ctx.save();
+        ctx.translate(sx, ty);
+        ctx.scale(-1, 1);  // flip horizontally — faces left (oncoming direction)
+        ctx.beginPath(); ctx.ellipse(0, 2, 34, 5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fill();
+        drawCarByStyle(ctx, TC_IDS[carIdx], TC_COLS[colIdx], trafficWA);
+        ctx.restore();
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // 9 ── CAR
     // ════════════════════════════════════════════════════════════════════════
     const car = getCar(state.selectedCar);
@@ -1716,7 +1774,7 @@ export default function GameCanvas({ state }: Props) {
     const wheelAngle = (state.positionMi * 5280 / (Math.PI * (WR * 2 / 12))) % (Math.PI * 2);
 
     ctx.save();
-    ctx.translate(carScreenX, carY);
+    ctx.translate(carScreenX, carY + 17); // right outer lane
     ctx.rotate(-tilt);
     ctx.beginPath();
     ctx.ellipse(0, 2, 36, 6, 0, 0, Math.PI * 2);
@@ -1735,6 +1793,128 @@ export default function GameCanvas({ state }: Props) {
     }
     drawCarByStyle(ctx, state.selectedCar, car.color, wheelAngle);
     ctx.restore();
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 9.2 ── WEATHER  (drawn in front of cars so precipitation is foreground)
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      const weatherType =
+        theme === 'coastal'    ? 'rain'    :
+        theme === 'valley'     ? 'rain'    :
+        theme === 'alpine'     ? 'snow'    :
+        theme === 'mountain'   ? 'snow'    :
+        theme === 'desert'     ? 'sand'    :
+        theme === 'city'       ? 'drizzle' :
+        theme === 'country'    ? 'rain'    :
+        'clear';
+
+      // Animate using scrollPx as a time base (increases every frame)
+      const T = scrollPx;
+
+      if (weatherType === 'rain' || weatherType === 'drizzle') {
+        const count  = weatherType === 'rain' ? 120 : 55;
+        const alpha  = weatherType === 'rain' ? 0.55 : 0.28;
+        const len    = weatherType === 'rain' ? 14   : 8;
+        const speed  = weatherType === 'rain' ? 2.8  : 1.8;
+        ctx.strokeStyle = 'rgba(160,200,240,' + alpha + ')';
+        ctx.lineWidth = weatherType === 'rain' ? 1 : 0.8;
+        const rngR = makeRng(seed + 0xccdd00);
+        for (let i = 0; i < count; i++) {
+          const bx = rngR() * (W + 60);         // 1  base x
+          const by = rngR() * (H + 40);         // 2  base y
+          // Animate: each drop falls at its own speed factor
+          const spd = 0.7 + rngR() * 0.6;       // 3  speed factor
+          const rx  = ((bx - T * speed * spd * 0.18) % (W + 60) + W + 60) % (W + 60) - 20;
+          const ry  = ((by + T * speed * spd)         % (H + 40) + H + 40) % (H + 40) - 10;
+          ctx.beginPath();
+          ctx.moveTo(rx, ry);
+          ctx.lineTo(rx - len * 0.35, ry + len);  // slight diagonal (wind)
+          ctx.stroke();
+        }
+        // Wet-road shimmer on asphalt
+        ctx.fillStyle = 'rgba(120,160,220,0.07)';
+        terrainPath(0);
+        ctx.lineWidth = 44; ctx.strokeStyle = 'rgba(120,160,220,0.07)'; ctx.stroke();
+
+      } else if (weatherType === 'snow') {
+        const rngS = makeRng(seed + 0xeeff11);
+        ctx.fillStyle = 'rgba(230,240,255,0.75)';
+        for (let i = 0; i < 80; i++) {
+          const bx = rngS() * (W + 80);          // 1
+          const by = rngS() * (H + 40);          // 2
+          const spd = 0.3 + rngS() * 0.5;        // 3  drift speed
+          const sz  = 1 + rngS() * 2.2;          // 4  flake size
+          const rx  = ((bx + Math.sin(T * 0.002 + i) * 12 - T * spd * 0.05) % (W + 80) + W + 80) % (W + 80) - 20;
+          const ry  = ((by + T * spd * 0.8)           % (H + 40) + H + 40) % (H + 40) - 10;
+          ctx.globalAlpha = 0.55 + Math.sin(i * 1.7) * 0.25;
+          ctx.beginPath(); ctx.arc(rx, ry, sz, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        // Snow accumulation on road surface tint
+        ctx.fillStyle = 'rgba(220,230,245,0.06)';
+        terrainPath(0); ctx.lineWidth = 44; ctx.strokeStyle = 'rgba(220,230,245,0.08)'; ctx.stroke();
+
+      } else if (weatherType === 'sand') {
+        // Sweeping horizontal sand layers
+        for (let layer = 0; layer < 4; layer++) {
+          const layerY   = skyH + layer * (H - skyH) * 0.28;
+          const layerSpd = 0.8 + layer * 0.5;
+          const alpha2   = 0.04 + layer * 0.025;
+          const rngSd = makeRng(seed + 0x112233 + layer);
+          ctx.fillStyle = `rgba(200,140,60,${alpha2})`;
+          ctx.fillRect(0, layerY, W, (H - skyH) * 0.30);
+          // Sand streaks
+          ctx.strokeStyle = `rgba(220,160,70,${alpha2 * 1.8})`;
+          ctx.lineWidth = 0.8;
+          for (let j = 0; j < 30; j++) {
+            const bx = rngSd() * W * 3;          // 1
+            const by = rngSd() * 20 - 10;        // 2
+            const streakX = ((bx - T * layerSpd * 1.4) % (W * 3) + W * 3) % (W * 3) - 20;
+            const streakY = layerY + (H - skyH) * 0.15 + by;
+            const streakLen = 20 + rngSd() * 50; // 3
+            if (streakX < -60 || streakX > W + 60) continue;
+            ctx.beginPath(); ctx.moveTo(streakX, streakY); ctx.lineTo(streakX + streakLen, streakY); ctx.stroke();
+          }
+        }
+        // Overall orange tint on sky
+        ctx.fillStyle = 'rgba(200,130,50,0.10)';
+        ctx.fillRect(0, 0, W, skyH);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 9.5 ── ROUTE COMPLETE OVERLAY
+    // ════════════════════════════════════════════════════════════════════════
+    if (state.routeComplete) {
+      // Dark vignette
+      ctx.fillStyle = 'rgba(0,0,0,0.52)';
+      ctx.fillRect(0, 0, W, H);
+      // Panel
+      const px = W / 2, py = H / 2;
+      ctx.fillStyle = 'rgba(14,22,34,0.92)';
+      ctx.beginPath(); ctx.roundRect(px - 155, py - 44, 310, 88, 8); ctx.fill();
+      ctx.strokeStyle = '#3fb950'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(px - 155, py - 44, 310, 88, 8); ctx.stroke();
+      // Checkered icon
+      const cx3 = px - 128, cy3 = py - 8;
+      const sq = 7;
+      for (let fy = 0; fy < 3; fy++) for (let fx = 0; fx < 3; fx++) {
+        ctx.fillStyle = (fy + fx) % 2 === 0 ? '#fff' : '#222';
+        ctx.fillRect(cx3 + fx * sq, cy3 + fy * sq, sq, sq);
+      }
+      // "ROUTE COMPLETE" heading
+      ctx.fillStyle = '#3fb950';
+      ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText('ROUTE COMPLETE', px + 10, py - 14);
+      // Route name
+      ctx.fillStyle = 'rgba(180,210,240,0.90)';
+      ctx.font = '12px system-ui';
+      ctx.fillText(route.name, px + 10, py + 6);
+      // Credits earned — large and prominent
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText(`+${route.reward.toLocaleString()} credits`, px + 10, py + 32);
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // 10 ── PROGRESS BAR + DISTANCE
