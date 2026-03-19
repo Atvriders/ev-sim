@@ -186,7 +186,7 @@ export default function DriveTab({ state, dispatch }: Props) {
 
           {/* Time scale */}
           <div className="timescale-btns">
-            {([1, 5, 10] as const).map(s => (
+            {([1, 5, 10, 25, 50, 100] as const).map(s => (
               <button
                 key={s}
                 className={`ts-btn ${state.timeScale === s ? 'active' : ''}`}

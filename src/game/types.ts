@@ -81,7 +81,7 @@ export interface GameState {
   // Active drive
   driving: boolean;
   paused: boolean;
-  timeScale: number;           // 1 | 5 | 10
+  timeScale: number;           // 1 | 5 | 10 | 25 | 50 | 100
   battery: number;             // current kWh
   speedMph: number;            // current speed
   targetSpeedMph: number;      // cruise target
