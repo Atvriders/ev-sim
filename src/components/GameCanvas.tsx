@@ -5,10 +5,8 @@ import { getCar } from '../game/cars';
 
 interface Props { state: GameState; }
 
-const W         = 800;
-const H         = 240;
-const VIEW_MILES = 1;
-const MI_PER_PX  = VIEW_MILES / W;
+const W = 800;
+const H = 240;
 
 // ── RNG helpers ────────────────────────────────────────────────────────────
 function makeRng(seed: number) {
@@ -313,6 +311,8 @@ export default function GameCanvas({ state }: Props) {
     }
 
     const theme: SceneTheme = ROUTE_THEME[route.id] ?? 'country';
+    const VIEW_MILES = state.timeScale >= 25 ? 5 : 1;
+    const MI_PER_PX  = VIEW_MILES / W;
     const terrain    = route.terrain;
     const distTotal  = route.distanceMi;
     const carScreenX = W * 0.28;
