@@ -305,6 +305,17 @@ export function reducer(state: GameState, action: Action): GameState {
         }
       }
 
+      // ── Route Planner: auto-queue nearest DCFC ahead ─────────────────────────
+      if (state.upgrades.includes('route_planner') && !next.isCharging && !dead && !complete) {
+        const nextDCFC = route?.chargers
+          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1)
+          .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null;
+        const targetId = nextDCFC?.id ?? null;
+        if (next.queuedChargerId !== targetId) {
+          next = { ...next, queuedChargerId: targetId };
+        }
+      }
+
       if (complete && !dead) {
         const reward = route.reward;
         const log = {
