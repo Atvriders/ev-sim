@@ -33,6 +33,7 @@ function buildInitialState(): GameState {
     chargeRateKw: 0,
     chargingAtId: null,
     queuedChargerId: null,
+    skippedChargerId: null,
 
     totalMilesDriven: 0,
     totalKwhUsed: 0,
@@ -135,6 +136,7 @@ export function reducer(state: GameState, action: Action): GameState {
           chargingAtId: null,
           chargeRateKw: 0,
           queuedChargerId: null,
+          skippedChargerId: null,
           positionMi: 0,
           speedMph: 0,
           currentKw: 0,
@@ -155,6 +157,7 @@ export function reducer(state: GameState, action: Action): GameState {
         chargeRateKw: 0,
         chargingAtId: null,
         queuedChargerId: null,
+        skippedChargerId: null,
         speedMph: 0,
         currentKw: 0,
         notification: 'Drive abandoned.',
@@ -174,7 +177,7 @@ export function reducer(state: GameState, action: Action): GameState {
     }
 
     case 'CANCEL_QUEUE_CHARGE':
-      return { ...state, queuedChargerId: null };
+      return { ...state, queuedChargerId: null, skippedChargerId: state.queuedChargerId };
 
     case 'START_CHARGE': {
       if (!state.driving) return state;
@@ -311,8 +314,17 @@ export function reducer(state: GameState, action: Action): GameState {
 
       // ── Route Planner: auto-queue nearest DCFC ahead ─────────────────────────
       if (state.upgrades.includes('route_planner') && !next.isCharging && !dead && !complete) {
+        // Clear skipped charger once the car has passed it (so planner resumes for the next one)
+        let skipped = next.skippedChargerId;
+        if (skipped) {
+          const skippedCharger = route?.chargers.find(c => c.id === skipped);
+          if (skippedCharger && newPos > skippedCharger.positionMi + 0.5) {
+            skipped = null;
+            next = { ...next, skippedChargerId: null };
+          }
+        }
         const nextDCFC = route?.chargers
-          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1)
+          .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1 && c.id !== skipped)
           .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null;
         const targetId = nextDCFC?.id ?? null;
         if (next.queuedChargerId !== targetId) {

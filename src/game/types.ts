@@ -101,6 +101,7 @@ export interface GameState {
   chargeRateKw: number;
   chargingAtId: string | null;
   queuedChargerId: string | null;  // pre-queued stop — auto-charges when car arrives
+  skippedChargerId: string | null; // user-cancelled stop — planner won't re-queue until passed
 
   // Stats
   totalMilesDriven: number;
