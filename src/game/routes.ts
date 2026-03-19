@@ -19,8 +19,9 @@ export const ROUTES: Route[] = [
       { distanceMi: 40, elevationFt: 100, speedLimitMph: 35 },
     ],
     chargers: [
-      { id: 'city_l2_a', name: 'Mall Level 2', network: 'ChargePoint', positionMi: 15, maxKw: 19.2, pricePerKwh: 0.12 },
-      { id: 'city_dc_a', name: 'Downtown DC Fast', network: 'Electrify America', positionMi: 28, maxKw: 150, pricePerKwh: 0.28 },
+      { id: 'city_l1_a', name: 'Parking Garage Outlet',  network: 'Public L1',         positionMi: 8,  maxKw: 1.4,  pricePerKwh: 0.10 },
+      { id: 'city_l2_a', name: 'Mall Level 2',            network: 'ChargePoint',        positionMi: 15, maxKw: 19.2, pricePerKwh: 0.12 },
+      { id: 'city_dc_a', name: 'Downtown DC Fast',        network: 'Electrify America',  positionMi: 28, maxKw: 150,  pricePerKwh: 0.28 },
     ],
   },
   {
@@ -41,8 +42,10 @@ export const ROUTES: Route[] = [
       { distanceMi: 80, elevationFt: 50,  speedLimitMph: 55 },
     ],
     chargers: [
-      { id: 'coast_sc_a', name: 'Seaside Supercharger', network: 'Tesla', positionMi: 22, maxKw: 250, pricePerKwh: 0.25 },
-      { id: 'coast_dc_a', name: 'Harbor DC Fast',       network: 'EVgo',  positionMi: 55, maxKw: 100, pricePerKwh: 0.30 },
+      { id: 'coast_l1_a', name: 'Beach Motel Outlet',    network: 'Public L1', positionMi: 12, maxKw: 1.9,  pricePerKwh: 0.08 },
+      { id: 'coast_sc_a', name: 'Seaside Supercharger',  network: 'Tesla',     positionMi: 22, maxKw: 250,  pricePerKwh: 0.25 },
+      { id: 'coast_l2_a', name: 'Cliffside Level 2',     network: 'Blink',     positionMi: 42, maxKw: 7.2,  pricePerKwh: 0.15 },
+      { id: 'coast_dc_a', name: 'Harbor DC Fast',        network: 'EVgo',      positionMi: 55, maxKw: 100,  pricePerKwh: 0.30 },
     ],
   },
 
@@ -66,9 +69,10 @@ export const ROUTES: Route[] = [
       { distanceMi: 130, elevationFt: 500,  speedLimitMph: 65 },
     ],
     chargers: [
-      { id: 'valley_sc_a',  name: 'Ridgeline Supercharger',  network: 'Tesla',             positionMi: 35,  maxKw: 250, pricePerKwh: 0.25 },
-      { id: 'valley_ea_a',  name: 'Valley Crossing EA',       network: 'Electrify America', positionMi: 72,  maxKw: 350, pricePerKwh: 0.27 },
-      { id: 'valley_l2_a',  name: 'Riverside Level 2',        network: 'ChargePoint',       positionMi: 105, maxKw: 19.2,pricePerKwh: 0.14 },
+      { id: 'valley_l1_a',  name: 'Farmhouse Outlet',         network: 'Public L1',         positionMi: 20,  maxKw: 1.4,  pricePerKwh: 0.09 },
+      { id: 'valley_sc_a',  name: 'Ridgeline Supercharger',   network: 'Tesla',             positionMi: 35,  maxKw: 250,  pricePerKwh: 0.25 },
+      { id: 'valley_ea_a',  name: 'Valley Crossing EA',        network: 'Electrify America', positionMi: 72,  maxKw: 350,  pricePerKwh: 0.27 },
+      { id: 'valley_l2_a',  name: 'Riverside Level 2',         network: 'ChargePoint',       positionMi: 105, maxKw: 19.2, pricePerKwh: 0.14 },
     ],
   },
   {
@@ -119,10 +123,12 @@ export const ROUTES: Route[] = [
       { distanceMi: 160, elevationFt: 2000, speedLimitMph: 55 },
     ],
     chargers: [
-      { id: 'mtn_sc_a', name: 'Base Camp Supercharger', network: 'Tesla',             positionMi: 18,  maxKw: 250, pricePerKwh: 0.25 },
-      { id: 'mtn_ea_a', name: 'Summit EA',               network: 'Electrify America', positionMi: 75,  maxKw: 350, pricePerKwh: 0.29 },
-      { id: 'mtn_l2_a', name: 'Ski Resort Level 2',      network: 'ChargePoint',       positionMi: 82,  maxKw: 19.2,pricePerKwh: 0.15 },
-      { id: 'mtn_sc_b', name: 'Descent Supercharger',    network: 'Tesla',             positionMi: 120, maxKw: 250, pricePerKwh: 0.25 },
+      { id: 'mtn_l1_a', name: 'Ranger Station Outlet',   network: 'Public L1',         positionMi: 10,  maxKw: 1.4,  pricePerKwh: 0.08 },
+      { id: 'mtn_sc_a', name: 'Base Camp Supercharger',  network: 'Tesla',             positionMi: 18,  maxKw: 250,  pricePerKwh: 0.25 },
+      { id: 'mtn_ea_a', name: 'Summit EA',                network: 'Electrify America', positionMi: 75,  maxKw: 350,  pricePerKwh: 0.29 },
+      { id: 'mtn_l2_a', name: 'Ski Resort Level 2',       network: 'ChargePoint',       positionMi: 82,  maxKw: 19.2, pricePerKwh: 0.15 },
+      { id: 'mtn_l1_b', name: 'Cabin Outlet',             network: 'Public L1',         positionMi: 100, maxKw: 1.9,  pricePerKwh: 0.08 },
+      { id: 'mtn_sc_b', name: 'Descent Supercharger',    network: 'Tesla',             positionMi: 120, maxKw: 250,  pricePerKwh: 0.25 },
     ],
   },
   {

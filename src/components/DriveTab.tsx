@@ -28,6 +28,24 @@ function fmtKw(kw: number): string {
 
 const DCFC_MIN_KW = 50; // threshold to count as DC fast charger
 
+function chargerTier(maxKw: number): { label: string; color: string } {
+  if (maxKw < 3)  return { label: 'Level 1',  color: '#8b949e' };
+  if (maxKw < 50) return { label: 'Level 2',  color: '#d29922' };
+  return              { label: 'DC Fast',  color: '#58a6ff' };
+}
+
+/** Format hours as h m s string */
+function fmtTime(hours: number): string {
+  if (!isFinite(hours) || hours <= 0) return '—';
+  const totalSec = Math.round(hours * 3600);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function DriveTab({ state, dispatch }: Props) {
   const car   = getCar(state.selectedCar);
   const route = state.currentRoute ? getRoute(state.currentRoute) : null;
@@ -120,11 +138,21 @@ export default function DriveTab({ state, dispatch }: Props) {
           <span className="battery-kwh">
             {state.battery.toFixed(1)} / {maxBat.toFixed(1)} kWh
           </span>
-          {state.isCharging && (
-            <span style={{ color: '#3fb950', fontWeight: 700 }}>
-              ⚡ Charging {state.chargeRateKw.toFixed(0)} kW
-            </span>
-          )}
+          {state.isCharging && (() => {
+            const tier = chargerTier(state.chargeRateKw);
+            const kwhTo80  = Math.max(0, maxBat * 0.80 - state.battery);
+            const kwhToFull = Math.max(0, maxBat - state.battery);
+            const hTo80  = kwhTo80  / state.chargeRateKw;
+            const hToFull = kwhToFull / state.chargeRateKw;
+            return (
+              <span style={{ color: '#3fb950', fontWeight: 700, fontSize: 12 }}>
+                ⚡ <span style={{ color: tier.color }}>{tier.label}</span>
+                {' · '}{state.chargeRateKw.toFixed(1)} kW
+                {' · '}+80%: {fmtTime(hTo80)}
+                {' · '}Full: {fmtTime(hToFull)}
+              </span>
+            );
+          })()}
         </div>
         <div className="battery-bar-track">
           <div
@@ -201,15 +229,28 @@ export default function DriveTab({ state, dispatch }: Props) {
         <div className="charger-list">
           <h3>Nearby Chargers</h3>
           {nearbyChargers.map(c => {
-            const dist  = c.positionMi - state.positionMi;
-            const rate  = Math.min(c.maxKw, car.maxChargeKw);
+            const dist      = c.positionMi - state.positionMi;
+            const rate      = Math.min(c.maxKw, car.maxChargeKw);
             const atCharger = Math.abs(dist) < 0.3;
+            const tier      = chargerTier(c.maxKw);
+            const kwhTo80   = Math.max(0, maxBat * 0.80 - state.battery);
+            const kwhToFull = Math.max(0, maxBat - state.battery);
             return (
               <div key={c.id} className="charger-item">
                 <div className="charger-info">
-                  <div className="charger-name">⚡ {c.name}</div>
+                  <div className="charger-name">
+                    ⚡ {c.name}
+                    <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: tier.color,
+                      background: '#21262d', border: `1px solid ${tier.color}`,
+                      borderRadius: 10, padding: '1px 7px' }}>
+                      {tier.label}
+                    </span>
+                  </div>
                   <div className="charger-meta">
-                    {c.network} · {rate.toFixed(0)} kW · ${c.pricePerKwh}/kWh
+                    {c.network} · <strong style={{ color: tier.color }}>{rate.toFixed(1)} kW</strong> · ${c.pricePerKwh}/kWh
+                  </div>
+                  <div className="charger-meta">
+                    +80%: {fmtTime(kwhTo80 / rate)} · Full: {fmtTime(kwhToFull / rate)}
                   </div>
                 </div>
                 <div className="charger-dist">{dist > 0 ? `+${dist.toFixed(1)} mi` : 'Here'}</div>
@@ -240,9 +281,21 @@ export default function DriveTab({ state, dispatch }: Props) {
                   {reachable ? '⚡' : '⚠️'}
                 </div>
                 <div className="charger-info">
-                  <div className="charger-name">{charger.name}</div>
+                  <div className="charger-name">
+                    {charger.name}
+                    {(() => {
+                      const t = chargerTier(charger.maxKw);
+                      return (
+                        <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: t.color,
+                          background: '#21262d', border: `1px solid ${t.color}`,
+                          borderRadius: 10, padding: '1px 7px' }}>
+                          {t.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="charger-meta">
-                    {charger.network} · {rate.toFixed(0)} kW · ${charger.pricePerKwh}/kWh
+                    {charger.network} · <strong style={{ color: chargerTier(charger.maxKw).color }}>{rate.toFixed(1)} kW</strong> · ${charger.pricePerKwh}/kWh
                   </div>
                   {!reachable && (
                     <div style={{ color: '#f85149', fontSize: 12, fontWeight: 600 }}>
