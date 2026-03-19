@@ -1,0 +1,112 @@
+import type { Upgrade, UpgradeId } from './types';
+
+export const UPGRADES: Upgrade[] = [
+  {
+    id: 'aero_kit',
+    name: 'Aero Kit',
+    desc: 'Front splitter, side skirts, and rear diffuser. Cuts drag noticeably.',
+    price: 800,
+    efficiencyBonus: 0.08,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'lightweight_wheels',
+    name: 'Lightweight Wheels',
+    desc: 'Forged alloy wheels shed rotational mass, improving acceleration and efficiency.',
+    price: 600,
+    efficiencyBonus: 0.05,
+    regenBonus: 0.05,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'thermal_mgmt',
+    name: 'Thermal Management',
+    desc: 'Active battery cooling keeps cells at optimal temp. Less degradation on climbs.',
+    price: 1200,
+    efficiencyBonus: 0.06,
+    regenBonus: 0,
+    batteryBonus: 5,
+    freeKw: 0,
+  },
+  {
+    id: 'regen_boost',
+    name: 'Regen Boost',
+    desc: 'Upgraded inverter tuning increases regenerative braking energy recovery.',
+    price: 900,
+    efficiencyBonus: 0,
+    regenBonus: 0.20,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'battery_plus',
+    name: 'Battery Pack+',
+    desc: 'Adds a supplemental cell module for extra usable capacity.',
+    price: 2500,
+    efficiencyBonus: 0,
+    regenBonus: 0,
+    batteryBonus: 20,
+    freeKw: 0,
+  },
+  {
+    id: 'eco_chip',
+    name: 'Eco Chip',
+    desc: 'Remapped motor controller reduces unnecessary draw at cruise.',
+    price: 500,
+    efficiencyBonus: 0.10,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'solar_roof',
+    name: 'Solar Roof',
+    desc: 'Glass panels trickle-charge the battery while driving in sunlight.',
+    price: 1500,
+    efficiencyBonus: 0,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 1.5,
+  },
+  {
+    id: 'heat_pump',
+    name: 'Heat Pump HVAC',
+    desc: 'Far more efficient than resistive heating. Saves energy in cold weather.',
+    price: 700,
+    efficiencyBonus: 0.07,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'performance_tires',
+    name: 'Low-Roll Tires',
+    desc: 'Lower rolling resistance compound. Marginal but real efficiency gain.',
+    price: 400,
+    efficiencyBonus: 0.04,
+    regenBonus: 0.03,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
+    id: 'sport_tune',
+    name: 'Sport Tune',
+    desc: 'Performance mode mapping. Sacrifice some efficiency for faster acceleration.',
+    price: 1000,
+    efficiencyBonus: -0.05,
+    regenBonus: 0.10,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+];
+
+export const UPGRADE_MAP: Record<UpgradeId, Upgrade> = Object.fromEntries(
+  UPGRADES.map(u => [u.id, u])
+) as Record<UpgradeId, Upgrade>;
+
+export function getUpgrade(id: UpgradeId): Upgrade {
+  return UPGRADE_MAP[id];
+}
