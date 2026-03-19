@@ -480,12 +480,14 @@ input[type='range'] {
   font-weight: 500;
   pointer-events: none;
   z-index: 999;
-  animation: toast-in 0.2s ease;
+  animation: toast-lifecycle 10s ease forwards;
 }
 
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+@keyframes toast-lifecycle {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  2%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(6px); }
 }
 
 /* ── Section heading ─────────────────────────────────────────────────────── */
