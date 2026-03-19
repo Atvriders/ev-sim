@@ -1349,6 +1349,158 @@ export default function GameCanvas({ state }: Props) {
         ctx.fill();
       }
 
+      // ── Buried items: bones, cars, trash, fossils, etc. ────────────────────
+      const rngBury = makeRng(seed + 0xc0ffee);
+      for (let bi = 0; bi < 60; bi++) {
+        const bmi   = rngBury() * (distTotal + 4) - 2;
+        const depth = 0.10 + rngBury() * 0.78;
+        const itype = Math.floor(rngBury() * 11);
+        const sc    = 0.65 + rngBury() * 0.85;
+        const tilt  = (rngBury() - 0.5) * 1.2;
+        const alpha = 0.22 + rngBury() * 0.28;
+        const rx    = miToX(bmi);
+        if (rx < -60 || rx > W + 60) continue;
+        const surfY = elToY(elevAt(bmi));
+        const ry    = surfY + depth * (H - surfY);
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(tilt);
+        ctx.globalAlpha = alpha;
+        switch (itype) {
+          case 0: { // Femur bone
+            ctx.fillStyle = '#d4c0a0';
+            ctx.beginPath(); ctx.arc(-8*sc, 0, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8*sc, 0, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-8*sc, -2.5*sc, 2*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8*sc, 2.5*sc, 2*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(-7*sc, -1.2*sc, 14*sc, 2.4*sc);
+            break;
+          }
+          case 1: { // Skull
+            ctx.fillStyle = '#c8b89a';
+            ctx.beginPath(); ctx.ellipse(0, -2*sc, 6*sc, 5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(0, 3*sc, 4*sc, 2.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath(); ctx.ellipse(-2.2*sc, -2.5*sc, 1.8*sc, 1.6*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(2.2*sc, -2.5*sc, 1.8*sc, 1.6*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#c8b89a';
+            for (let t = -3; t <= 3; t += 2)
+              ctx.fillRect(t*sc - 0.7*sc, 1.8*sc, 1.4*sc, 2.2*sc);
+            break;
+          }
+          case 2: { // Buried car (side view)
+            ctx.fillStyle = '#2c3a40';
+            ctx.fillRect(-14*sc, -4*sc, 28*sc, 8*sc);
+            ctx.fillRect(-8*sc, -9*sc, 16*sc, 5.5*sc);
+            ctx.fillStyle = '#182028';
+            ctx.fillRect(-6.5*sc, -8.5*sc, 5.5*sc, 3.5*sc);
+            ctx.fillRect(1*sc, -8.5*sc, 5.5*sc, 3.5*sc);
+            ctx.fillStyle = '#101010';
+            ctx.beginPath(); ctx.arc(-8*sc, 4.5*sc, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8*sc, 4.5*sc, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#282828';
+            ctx.beginPath(); ctx.arc(-8*sc, 4.5*sc, 1.8*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(8*sc, 4.5*sc, 1.8*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 3: { // Trash bag
+            ctx.fillStyle = '#252218';
+            ctx.beginPath(); ctx.ellipse(0, 3*sc, 9*sc, 7*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#181610';
+            ctx.beginPath(); ctx.arc(0, -4.5*sc, 2.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.moveTo(-5*sc, -1*sc); ctx.quadraticCurveTo(-2*sc, -3*sc, -5*sc, -5.5*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(5*sc, -1*sc); ctx.quadraticCurveTo(2*sc, -3*sc, 4.5*sc, -5.5*sc); ctx.stroke();
+            break;
+          }
+          case 4: { // Beer bottle
+            ctx.fillStyle = '#1e3c18';
+            ctx.beginPath(); ctx.ellipse(0, 3*sc, 4.5*sc, 6.5*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(-1.8*sc, -8*sc, 3.6*sc, 6*sc);
+            ctx.fillStyle = '#a89020';
+            ctx.fillRect(-2.2*sc, -9.5*sc, 4.4*sc, 1.8*sc);
+            break;
+          }
+          case 5: { // Treasure chest
+            ctx.fillStyle = '#4a3010';
+            ctx.fillRect(-9*sc, -1*sc, 18*sc, 8*sc);
+            ctx.fillStyle = '#3a2808';
+            ctx.beginPath();
+            ctx.moveTo(-9*sc, -1*sc); ctx.lineTo(-9*sc, -5*sc);
+            ctx.bezierCurveTo(-9*sc, -9*sc, 9*sc, -9*sc, 9*sc, -5*sc);
+            ctx.lineTo(9*sc, -1*sc); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#807850'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(-9*sc, 2*sc); ctx.lineTo(9*sc, 2*sc); ctx.stroke();
+            ctx.fillStyle = '#b09848';
+            ctx.fillRect(-1.5*sc, -4*sc, 3*sc, 4*sc);
+            ctx.strokeStyle = '#b09848';
+            ctx.beginPath(); ctx.arc(0, -4*sc, 1.5*sc, Math.PI, Math.PI*2); ctx.stroke();
+            break;
+          }
+          case 6: { // Dinosaur rib fossil
+            ctx.strokeStyle = '#c0aa80'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(-11*sc, 0); ctx.lineTo(11*sc, 0); ctx.stroke();
+            ctx.lineWidth = 1;
+            for (let r = -8; r <= 8; r += 4) {
+              ctx.beginPath(); ctx.moveTo(r*sc, 0);
+              ctx.quadraticCurveTo((r+2)*sc, 4*sc, r*sc, 7*sc); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(r*sc, 0);
+              ctx.quadraticCurveTo((r-2)*sc, -4*sc, r*sc, -7*sc); ctx.stroke();
+            }
+            break;
+          }
+          case 7: { // Ancient amphora
+            ctx.fillStyle = '#7a4820';
+            ctx.beginPath(); ctx.ellipse(0, 2*sc, 6*sc, 8*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillRect(-2.2*sc, -7*sc, 4.4*sc, 4*sc);
+            ctx.beginPath(); ctx.ellipse(0, -7*sc, 3.2*sc, 1.4*sc, 0, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#7a4820'; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(-8*sc, 0, 3.5*sc, -0.8, 0.8); ctx.stroke();
+            ctx.beginPath(); ctx.arc(8*sc, 0, 3.5*sc, Math.PI - 0.8, Math.PI + 0.8); ctx.stroke();
+            break;
+          }
+          case 8: { // Old tire
+            ctx.strokeStyle = '#181818'; ctx.lineWidth = 4.5*sc;
+            ctx.beginPath(); ctx.arc(0, 0, 7*sc, 0, Math.PI*2); ctx.stroke();
+            ctx.fillStyle = '#1e1e1e';
+            ctx.beginPath(); ctx.arc(0, 0, 3.5*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+          case 9: { // Coffin
+            ctx.fillStyle = '#2a180a';
+            ctx.beginPath();
+            ctx.moveTo(0, -9*sc);  ctx.lineTo(5*sc, -6*sc);
+            ctx.lineTo(5.5*sc, 5*sc); ctx.lineTo(0, 8*sc);
+            ctx.lineTo(-5.5*sc, 5*sc); ctx.lineTo(-5*sc, -6*sc);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#4a2818'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, -7*sc); ctx.lineTo(0, 4*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-3*sc, -2*sc); ctx.lineTo(3*sc, -2*sc); ctx.stroke();
+            break;
+          }
+          case 10: { // Shopping cart (top-down / side)
+            ctx.strokeStyle = '#606060'; ctx.lineWidth = 1.5;
+            ctx.strokeRect(-8*sc, -5*sc, 16*sc, 9*sc);
+            // Grid lines
+            ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(-8*sc, -1*sc); ctx.lineTo(8*sc, -1*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-8*sc, 3*sc); ctx.lineTo(8*sc, 3*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-2*sc, -5*sc); ctx.lineTo(-2*sc, 4*sc); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(2*sc, -5*sc); ctx.lineTo(2*sc, 4*sc); ctx.stroke();
+            // Handle
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-8*sc, -5*sc); ctx.lineTo(-10*sc, -7*sc); ctx.lineTo(10*sc, -7*sc); ctx.lineTo(8*sc, -5*sc); ctx.stroke();
+            // Wheels
+            ctx.fillStyle = '#505050';
+            ctx.beginPath(); ctx.arc(-6*sc, 4.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(6*sc, 4.5*sc, 1.5*sc, 0, Math.PI*2); ctx.fill();
+            break;
+          }
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+
       ctx.restore();
     }
     // Gravel/dirt shoulder (widest layer)
@@ -1453,87 +1605,101 @@ export default function GameCanvas({ state }: Props) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // 8 ── CHARGER STATIONS
+    // 8 ── CHARGER STATIONS (placed beside the road, not on it)
     // ════════════════════════════════════════════════════════════════════════
     for (const charger of route.chargers) {
       const cx2 = miToX(charger.positionMi);
       if (cx2 < -30 || cx2 > W + 30) continue;
-      const roadY = elToY(elevAt(charger.positionMi));
+      const roadY    = elToY(elevAt(charger.positionMi));
       const isActive = state.chargingAtId === charger.id;
+      const isDCFC   = charger.maxKw >= 50;
 
-      // ── Background building / canopy behind charger ───────────────────
-      const isDCFC = charger.maxKw >= 50;
+      // All charger structures sit to the RIGHT of the road (road shoulder + beyond)
+      // poleX = position of the charger unit pole, clear of the road edge (~22 px right)
+      const poleX = cx2 + 22;
+
       if (isDCFC) {
-        // DC fast charger: modern charging plaza canopy + small building
-        const bldX = cx2 + 16, bldY = roadY - 48;
-        // Canopy
+        // ── DC fast charger: large canopy over poleX, service building further right ──
+        const bldX  = poleX + 32;   // service building centre
+        const canyX = poleX + 10;   // canopy centre
+
+        // Canopy (wide flat roof)
         ctx.fillStyle = '#1e2838';
-        ctx.fillRect(bldX - 20, bldY + 8, 40, 5);
+        ctx.fillRect(canyX - 24, roadY - 44, 48, 6);
         ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 0.8;
-        ctx.strokeRect(bldX - 20, bldY + 8, 40, 5);
+        ctx.strokeRect(canyX - 24, roadY - 44, 48, 6);
         // Canopy support poles
         ctx.strokeStyle = '#607080'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(bldX - 14, bldY + 13); ctx.lineTo(bldX - 14, roadY - 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(bldX + 14, bldY + 13); ctx.lineTo(bldX + 14, roadY - 2); ctx.stroke();
-        // Small service building
+        ctx.beginPath(); ctx.moveTo(canyX - 16, roadY - 38); ctx.lineTo(canyX - 16, roadY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(canyX + 16, roadY - 38); ctx.lineTo(canyX + 16, roadY); ctx.stroke();
+
+        // Service building
         ctx.fillStyle = '#222a38';
-        ctx.fillRect(bldX + 22, roadY - 34, 22, 34);
+        ctx.fillRect(bldX - 12, roadY - 34, 24, 34);
         ctx.fillStyle = '#1a2230';
-        ctx.fillRect(bldX + 20, roadY - 37, 26, 4);
-        // Building windows
+        ctx.fillRect(bldX - 14, roadY - 37, 28, 4);
+        // Windows
         ctx.fillStyle = isActive ? 'rgba(63,185,80,0.55)' : 'rgba(88,166,255,0.40)';
-        ctx.fillRect(bldX + 25, roadY - 28, 6, 5);
-        ctx.fillRect(bldX + 33, roadY - 28, 6, 5);
-        ctx.fillRect(bldX + 25, roadY - 18, 6, 5);
-        ctx.fillRect(bldX + 33, roadY - 18, 6, 5);
+        ctx.fillRect(bldX - 9, roadY - 28, 6, 5);
+        ctx.fillRect(bldX + 3, roadY - 28, 6, 5);
+        ctx.fillRect(bldX - 9, roadY - 18, 6, 5);
+        ctx.fillRect(bldX + 3, roadY - 18, 6, 5);
         // Sign
         ctx.fillStyle = isActive ? '#3fb950' : '#58a6ff';
         ctx.font = 'bold 6px system-ui'; ctx.textAlign = 'center';
-        ctx.fillText('EV⚡', bldX + 33, roadY - 6);
+        ctx.fillText('EV⚡', bldX, roadY - 6);
       } else {
-        // Level 1/2 charger: gas-station-style canopy
-        const bldX = cx2 + 14;
-        // Canopy roof
+        // ── Level 1/2: gas-station canopy + small store ──
+        const canyX = poleX;
+        const storeX = poleX + 26;
+
+        // Canopy
         ctx.fillStyle = '#28303a';
-        ctx.fillRect(bldX - 18, roadY - 46, 36, 6);
+        ctx.fillRect(canyX - 16, roadY - 44, 32, 6);
         ctx.strokeStyle = '#d29922'; ctx.lineWidth = 0.8;
-        ctx.strokeRect(bldX - 18, roadY - 46, 36, 6);
-        // Canopy post
+        ctx.strokeRect(canyX - 16, roadY - 44, 32, 6);
+        // Centre post
         ctx.strokeStyle = '#505868'; ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.moveTo(bldX, roadY - 40); ctx.lineTo(bldX, roadY - 2); ctx.stroke();
-        // Small store/booth beside
+        ctx.beginPath(); ctx.moveTo(canyX, roadY - 38); ctx.lineTo(canyX, roadY); ctx.stroke();
+        // Store
         ctx.fillStyle = '#1e2830';
-        ctx.fillRect(bldX + 20, roadY - 32, 18, 32);
+        ctx.fillRect(storeX - 10, roadY - 32, 20, 32);
         ctx.fillStyle = '#18202a';
-        ctx.fillRect(bldX + 18, roadY - 35, 22, 4);
+        ctx.fillRect(storeX - 12, roadY - 35, 24, 4);
         // Door
         ctx.fillStyle = '#0a1018';
-        ctx.fillRect(bldX + 25, roadY - 12, 7, 12);
+        ctx.fillRect(storeX - 4, roadY - 12, 8, 12);
         // Window
         ctx.fillStyle = 'rgba(160,200,240,0.35)';
-        ctx.fillRect(bldX + 22, roadY - 28, 8, 7);
+        ctx.fillRect(storeX - 9, roadY - 28, 8, 7);
       }
 
-      const stationY = roadY - 36;
+      // ── Charger unit: pole + box beside the road ──────────────────────
+      const stationY = roadY - 38;
+      // Pole (rises from ground beside road)
       ctx.strokeStyle = '#606870'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(cx2, roadY - 2); ctx.lineTo(cx2, stationY + 20); ctx.stroke();
-      ctx.strokeStyle = '#708090'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(cx2, stationY + 6); ctx.lineTo(cx2 + 10, stationY + 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(poleX, roadY); ctx.lineTo(poleX, stationY + 20); ctx.stroke();
+      // Arm extending toward road (cable tray)
+      ctx.strokeStyle = '#708090'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(poleX, stationY + 8); ctx.lineTo(poleX - 10, stationY + 8); ctx.stroke();
+      // Charger box
       ctx.fillStyle = isActive ? '#0d2d1a' : '#0d1e30';
-      ctx.beginPath(); ctx.roundRect(cx2 - 11, stationY, 22, 20, 3); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(poleX - 11, stationY, 22, 20, 3); ctx.fill();
       ctx.strokeStyle = isActive ? '#3fb950' : '#58a6ff'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(cx2 - 11, stationY, 22, 20, 3); ctx.stroke();
-      const scr = ctx.createLinearGradient(cx2-8, stationY+3, cx2-8, stationY+11);
+      ctx.beginPath(); ctx.roundRect(poleX - 11, stationY, 22, 20, 3); ctx.stroke();
+      // Screen
+      const scr = ctx.createLinearGradient(poleX - 8, stationY + 3, poleX - 8, stationY + 11);
       scr.addColorStop(0, isActive ? 'rgba(63,185,80,0.8)' : 'rgba(88,166,255,0.8)');
       scr.addColorStop(1, isActive ? 'rgba(63,185,80,0.3)' : 'rgba(88,166,255,0.3)');
-      ctx.fillStyle = scr; ctx.fillRect(cx2-8, stationY+3, 16, 8);
+      ctx.fillStyle = scr; ctx.fillRect(poleX - 8, stationY + 3, 16, 8);
       ctx.fillStyle = isActive ? '#3fb950' : '#58a6ff';
       ctx.font = 'bold 9px system-ui'; ctx.textAlign = 'center';
-      ctx.fillText('⚡', cx2, stationY + 18);
+      ctx.fillText('⚡', poleX, stationY + 18);
+      // Active glow (beside road, not on it)
       if (isActive) {
-        ctx.globalAlpha = 0.18;
+        ctx.globalAlpha = 0.15;
         ctx.fillStyle = '#3fb950';
-        ctx.beginPath(); ctx.arc(cx2, roadY - 18, 28, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(poleX, roadY - 18, 26, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
