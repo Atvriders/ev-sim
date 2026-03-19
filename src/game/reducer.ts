@@ -123,6 +123,7 @@ export function reducer(state: GameState, action: Action): GameState {
         return notify(state, `Complete ${route.unlockAfterTrips} trips first.`);
       const car = getCar(state.selectedCar);
       const { batteryBonus } = computeUpgradeStats(state.upgrades);
+      const startLimit = route.terrain[0]?.speedLimitMph ?? 65;
       return notify(
         {
           ...state,
@@ -137,6 +138,7 @@ export function reducer(state: GameState, action: Action): GameState {
           speedMph: 0,
           currentKw: 0,
           currentRoute: route.id,
+          targetSpeedMph: startLimit,
           battery: car.batteryKwh + batteryBonus, // full charge at start
         },
         `Starting ${route.name}!`
@@ -176,14 +178,20 @@ export function reducer(state: GameState, action: Action): GameState {
       };
     }
 
-    case 'STOP_CHARGE':
+    case 'STOP_CHARGE': {
+      const resumeRoute = getRoute(state.currentRoute ?? '');
+      const resumeLimit = resumeRoute?.terrain.reduce((lim, pt) => {
+        if (pt.distanceMi <= state.positionMi) return pt.speedLimitMph;
+        return lim;
+      }, 65) ?? 65;
       return {
         ...state,
         isCharging: false,
         chargeRateKw: 0,
         chargingAtId: null,
-        targetSpeedMph: 65,
+        targetSpeedMph: resumeLimit,
       };
+    }
 
     case 'TICK': {
       if (!state.driving || state.paused || state.routeComplete || state.batteryDead) return state;
@@ -211,24 +219,35 @@ export function reducer(state: GameState, action: Action): GameState {
 
       // ── Driving tick ─────────────────────────────────────────────────────────
       const upgrades = state.upgrades.map(id => getUpgrade(id)).filter(Boolean);
-      const updates  = physicsTick(state, car, route?.terrain ?? [], upgrades, deltaS);
+      // Compute speed limit at current position so physics obeys it automatically
+      const currentSpeedLimit = route.terrain.reduce((lim, pt) => {
+        if (pt.distanceMi <= state.positionMi) return pt.speedLimitMph;
+        return lim;
+      }, 65);
+      const effectiveTarget = Math.min(state.targetSpeedMph, currentSpeedLimit);
+      const updates  = physicsTick(
+        { ...state, targetSpeedMph: effectiveTarget },
+        car, route?.terrain ?? [], upgrades, deltaS
+      );
 
       const newPos    = updates.positionMi ?? state.positionMi;
       const newBat    = updates.battery ?? state.battery;
       const dead      = newBat <= 0;
       const complete  = newPos >= route.distanceMi;
 
-      // Enforce speed limit
+      // Enforce speed limit — clamp to limit for physics but preserve the
+      // user's preferred speed in state so the car speeds back up automatically
+      // when a lower-limit zone ends.
       const speedLimit = route.terrain.reduce((lim, pt) => {
         if (pt.distanceMi <= newPos) return pt.speedLimitMph;
         return lim;
       }, 65);
-      const clampedTarget = Math.min(state.targetSpeedMph, speedLimit);
 
       let next: GameState = {
         ...state,
         ...updates,
-        targetSpeedMph: clampedTarget,
+        // Keep user's preferred target; effective limit enforced via physics below
+        targetSpeedMph: state.targetSpeedMph,
         batteryDead: dead,
         routeComplete: complete && !dead,
       };
