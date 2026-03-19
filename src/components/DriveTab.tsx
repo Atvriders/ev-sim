@@ -64,9 +64,13 @@ export default function DriveTab({ state, dispatch }: Props) {
       }, 65)
     : 65;
 
-  // Estimated range
+  // Estimated range — use live efficiency when driving (kW draw at current speed),
+  // fall back to EPA baseline when stopped or charging
   const effMiKwh = car.efficiencyMiKwh;
-  const estRange = (state.battery * effMiKwh).toFixed(0);
+  const liveEffMiKwh = (state.driving && !state.isCharging && state.currentKw > 0.5 && state.speedMph > 5)
+    ? state.speedMph / state.currentKw   // mi/h ÷ kW = mi/kWh at this instant
+    : effMiKwh;
+  const estRange = (state.battery * liveEffMiKwh).toFixed(0);
 
   // Next charger ahead (within 10 mi) for the inline banner.
   // With Route Planner, only show DC fast chargers in the banner (planner manages the route);
