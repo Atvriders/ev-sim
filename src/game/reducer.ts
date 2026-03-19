@@ -225,6 +225,28 @@ export function reducer(state: GameState, action: Action): GameState {
         const chargedKwh = state.chargeRateKw * (deltaS / 3600);
         const newBat = Math.min(state.battery + chargedKwh, maxBat);
         const cost = chargedKwh * (charger?.pricePerKwh ?? 0.27);
+        const full = newBat >= maxBat;
+        if (full) {
+          const resumeRoute = getRoute(state.currentRoute ?? '');
+          const resumeLimit = resumeRoute?.terrain.reduce((lim, pt) => {
+            if (pt.distanceMi <= state.positionMi) return pt.speedLimitMph;
+            return lim;
+          }, 65) ?? 65;
+          return notify(
+            {
+              ...state,
+              battery: maxBat,
+              currentKw: 0,
+              credits: Math.max(0, state.credits - cost),
+              totalKwhCharged: state.totalKwhCharged + chargedKwh,
+              isCharging: false,
+              chargeRateKw: 0,
+              chargingAtId: null,
+              targetSpeedMph: resumeLimit,
+            },
+            'Fully charged! Resuming drive.'
+          );
+        }
         return {
           ...state,
           battery: newBat,
