@@ -235,14 +235,6 @@ export function reducer(state: GameState, action: Action): GameState {
       const dead      = newBat <= 0;
       const complete  = newPos >= route.distanceMi;
 
-      // Enforce speed limit — clamp to limit for physics but preserve the
-      // user's preferred speed in state so the car speeds back up automatically
-      // when a lower-limit zone ends.
-      const speedLimit = route.terrain.reduce((lim, pt) => {
-        if (pt.distanceMi <= newPos) return pt.speedLimitMph;
-        return lim;
-      }, 65);
-
       let next: GameState = {
         ...state,
         ...updates,
