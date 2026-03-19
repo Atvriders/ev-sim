@@ -1,7 +1,7 @@
 import type { GameState, Action } from '../game/types';
 import { getRoute } from '../game/routes';
 import { getCar } from '../game/cars';
-import { computeUpgradeStats } from '../game/physics';
+import { computeUpgradeStats, gradeAt } from '../game/physics';
 import GameCanvas from './GameCanvas';
 
 interface Props {
@@ -63,6 +63,11 @@ export default function DriveTab({ state, dispatch }: Props) {
         return lim;
       }, 65)
     : 65;
+
+  // Road grade at current position
+  const grade = route ? gradeAt(state.positionMi, route.terrain) : 0;
+  const gradePct = (grade * 100).toFixed(1);
+  const gradeColor = grade > 0.005 ? '#d29922' : grade < -0.005 ? '#58a6ff' : '#8b949e';
 
   // Estimated range — use live efficiency when driving (kW draw at current speed),
   // fall back to EPA baseline when stopped or charging
@@ -127,6 +132,47 @@ export default function DriveTab({ state, dispatch }: Props) {
           <div className="gauge-label">{state.isCharging ? 'Charging' : state.currentKw < -0.5 ? 'Regen' : 'Draw'}</div>
           <div className="gauge-value">{fmtKw(state.isCharging ? -state.chargeRateKw : state.currentKw)}</div>
           <div className="gauge-unit">kW</div>
+        </div>
+
+        {/* ── Grade / Incline ── */}
+        <div className="gauge">
+          <div className="gauge-label">Grade</div>
+          <svg width="56" height="26" viewBox="0 0 56 26" style={{ display: 'block', margin: '5px 0 3px' }}>
+            {/* Flat horizon reference */}
+            <line x1="2" y1="16" x2="54" y2="16" stroke="#30363d" strokeWidth="1" strokeDasharray="3,2"/>
+            {/* Road surface */}
+            {(() => {
+              const clamp = (v: number) => Math.min(23, Math.max(3, v));
+              const ly = clamp(13 + grade * 90);
+              const ry = clamp(13 - grade * 90);
+              const midY = (ly + ry) / 2;
+              const tiltDeg = -Math.atan(grade * 3) * 180 / Math.PI;
+              return (
+                <>
+                  {/* Road fill */}
+                  <polygon
+                    points={`4,${ly} 52,${ry} 52,${ry + 3} 4,${ly + 3}`}
+                    fill={gradeColor} opacity="0.25"
+                  />
+                  {/* Road surface line */}
+                  <line x1="4" y1={ly} x2="52" y2={ry} stroke={gradeColor} strokeWidth="2.5" strokeLinecap="round"/>
+                  {/* Mini car at midpoint */}
+                  <g transform={`translate(28,${midY - 5}) rotate(${tiltDeg})`}>
+                    <rect x="-5" y="-1" width="10" height="3" fill={gradeColor} rx="1"/>
+                    <rect x="-3" y="-4" width="6" height="3" fill={gradeColor} rx="1" opacity="0.75"/>
+                    <circle cx="-3" cy="2" r="1.5" fill="#1a1a2a"/>
+                    <circle cx="3"  cy="2" r="1.5" fill="#1a1a2a"/>
+                  </g>
+                </>
+              );
+            })()}
+          </svg>
+          <div className="gauge-value" style={{ fontSize: 20, color: gradeColor }}>
+            {grade >= 0 ? '+' : ''}{gradePct}%
+          </div>
+          <div className="gauge-unit">
+            {grade > 0.005 ? '▲ uphill' : grade < -0.005 ? '▼ downhill' : '— flat'}
+          </div>
         </div>
 
         <div className="gauge" style={{ position: 'relative' }}>
