@@ -139,7 +139,7 @@ export function reducer(state: GameState, action: Action): GameState {
           speedMph: 0,
           currentKw: 0,
           currentRoute: route.id,
-          targetSpeedMph: 65,
+          targetSpeedMph: 0,
           battery: car.batteryKwh + batteryBonus, // full charge at start
         },
         `Starting ${route.name}!`
@@ -182,7 +182,8 @@ export function reducer(state: GameState, action: Action): GameState {
       const charger = route?.chargers.find(c => c.id === action.chargerId);
       if (!charger) return state;
       const car = getCar(state.selectedCar);
-      const rateKw = Math.min(charger.maxKw, car.maxChargeKw);
+      const { chargeRateBonus } = computeUpgradeStats(state.upgrades);
+      const rateKw = Math.min(charger.maxKw, car.maxChargeKw + chargeRateBonus);
       return {
         ...state,
         isCharging: true,
@@ -210,7 +211,7 @@ export function reducer(state: GameState, action: Action): GameState {
       const deltaS = (action.delta / 1000) * state.timeScale;
       const route  = getRoute(state.currentRoute ?? '');
       const car    = getCar(state.selectedCar);
-      const { batteryBonus } = computeUpgradeStats(state.upgrades);
+      const { batteryBonus, chargeRateBonus, fineMultiplier, v2gReturn } = computeUpgradeStats(state.upgrades);
       const maxBat = car.batteryKwh + batteryBonus;
 
       // ── Charging tick ────────────────────────────────────────────────────────
@@ -218,7 +219,8 @@ export function reducer(state: GameState, action: Action): GameState {
         const charger = route?.chargers.find(c => c.id === state.chargingAtId);
         const chargedKwh = state.chargeRateKw * (deltaS / 3600);
         const newBat = Math.min(state.battery + chargedKwh, maxBat);
-        const cost = chargedKwh * (charger?.pricePerKwh ?? 0.27);
+        const rawCost = chargedKwh * (charger?.pricePerKwh ?? 0.27);
+        const cost = rawCost * (1 - v2gReturn);   // V2G returns a fraction
         const full = newBat >= maxBat;
         if (full) {
           const resumeRoute = getRoute(state.currentRoute ?? '');
@@ -273,7 +275,7 @@ export function reducer(state: GameState, action: Action): GameState {
 
       // ── Speeding fine: >5 mph over limit costs credits each tick ─────────────
       const speedExcess = Math.max(0, newSpeed - currentSpeedLimit - 5);
-      const fine = speedExcess * 0.015 * deltaS; // ~$0.015 per excess-mph per game-second
+      const fine = speedExcess * 0.015 * deltaS * fineMultiplier; // radar detector reduces this
 
       let next: GameState = {
         ...state,
@@ -289,7 +291,7 @@ export function reducer(state: GameState, action: Action): GameState {
       if (state.queuedChargerId && !dead && !complete) {
         const qc = route?.chargers.find(c => c.id === state.queuedChargerId);
         if (qc && Math.abs(newPos - qc.positionMi) < 0.3) {
-          const rateKw = Math.min(qc.maxKw, car.maxChargeKw);
+          const rateKw = Math.min(qc.maxKw, car.maxChargeKw + chargeRateBonus);
           next = notify(
             {
               ...next,

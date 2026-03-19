@@ -14,22 +14,31 @@ export function computeUpgradeStats(upgrades: string[]): {
   regenMult: number;
   batteryBonus: number;
   freeKw: number;
+  chargeRateBonus: number;
+  fineMultiplier: number;
+  v2gReturn: number;
 } {
   let efficiencyMult = 1;
   let regenMult = 1;
   let batteryBonus = 0;
   let freeKw = 0;
+  let chargeRateBonus = 0;
+  let fineMultiplier = 1;
+  let v2gReturn = 0;
 
   for (const id of upgrades) {
     const upg = UPGRADE_MAP[id as keyof typeof UPGRADE_MAP];
     if (!upg) continue;
-    efficiencyMult *= (1 - upg.efficiencyBonus); // lower consumption
-    regenMult      *= (1 + upg.regenBonus);
-    batteryBonus   += upg.batteryBonus;
-    freeKw         += upg.freeKw;
+    efficiencyMult  *= (1 - upg.efficiencyBonus);
+    regenMult       *= (1 + upg.regenBonus);
+    batteryBonus    += upg.batteryBonus;
+    freeKw          += upg.freeKw;
+    chargeRateBonus += upg.chargeRateBonus;
+    fineMultiplier  *= upg.fineMultiplier;
+    v2gReturn       += upg.v2gReturn;
   }
 
-  return { efficiencyMult, regenMult, batteryBonus, freeKw };
+  return { efficiencyMult, regenMult, batteryBonus, freeKw, chargeRateBonus, fineMultiplier, v2gReturn };
 }
 
 /**

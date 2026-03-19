@@ -18,17 +18,22 @@ export type UpgradeId =
   | 'aero_kit' | 'lightweight_wheels' | 'thermal_mgmt'
   | 'regen_boost' | 'battery_plus' | 'eco_chip'
   | 'solar_roof' | 'heat_pump' | 'performance_tires' | 'sport_tune'
-  | 'route_planner' | 'autopilot' | 'adaptive_cruise';
+  | 'route_planner' | 'autopilot' | 'adaptive_cruise'
+  | 'perf_inverter' | 'radar_detector' | 'v2g'
+  | 'dual_motor' | 'carbon_fiber' | 'regen_suspension' | 'smart_glass';
 
 export interface Upgrade {
   id: UpgradeId;
   name: string;
   desc: string;
   price: number;
-  efficiencyBonus: number;  // fraction: 0.08 = 8% less consumption
-  regenBonus:      number;  // fraction: 0.10 = 10% more regen
-  batteryBonus:    number;  // extra kWh added to battery
-  freeKw:          number;  // passive free kW (solar)
+  efficiencyBonus:  number;  // fraction: 0.08 = 8% less consumption
+  regenBonus:       number;  // fraction: 0.10 = 10% more regen
+  batteryBonus:     number;  // extra kWh added to battery
+  freeKw:           number;  // passive free kW (solar)
+  chargeRateBonus:  number;  // extra kW the car can accept at DC chargers
+  fineMultiplier:   number;  // fraction applied to speeding fines (0.40 = 60% off)
+  v2gReturn:        number;  // fraction of charging cost refunded (0.30 = 30% back)
 }
 
 export interface ChargerStation {
