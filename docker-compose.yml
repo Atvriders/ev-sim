@@ -1,0 +1,7 @@
+version: "3.8"
+services:
+  ev-sim:
+    image: ghcr.io/atvriders/ev-sim:latest
+    ports:
+      - "3003:80"
+    restart: unless-stopped
