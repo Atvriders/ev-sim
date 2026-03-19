@@ -207,6 +207,8 @@ export function reducer(state: GameState, action: Action): GameState {
         isCharging: false,
         chargeRateKw: 0,
         chargingAtId: null,
+        // Prevent route planner re-queuing this charger while car is still in its window
+        skippedChargerId: state.chargingAtId,
         targetSpeedMph: 65,
       };
     }
@@ -244,7 +246,10 @@ export function reducer(state: GameState, action: Action): GameState {
               isCharging: false,
               chargeRateKw: 0,
               chargingAtId: null,
-              queuedChargerId: null,  // ensure no stale queue triggers re-charge
+              queuedChargerId: null,
+              // Mark just-used charger as skipped so route planner doesn't
+              // immediately re-queue it (car may still be within the arrival window)
+              skippedChargerId: state.chargingAtId,
               targetSpeedMph: resumeLimit,
             },
             'Fully charged! Resuming drive.'
