@@ -10,7 +10,7 @@ export const INITIAL_STATE: GameState = buildInitialState();
 function buildInitialState(): GameState {
   const saved = loadGame();
   const defaults: GameState = {
-    credits: 500,
+    credits: 1000,
     totalTrips: 0,
 
     selectedCar: 'nissan_leaf_2011',

@@ -90,7 +90,7 @@ function CarCard({ car, state, dispatch, batteryBonus }: {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className={`car-price ${car.price === 0 ? 'free' : ''}`}>
-          {car.price === 0 ? 'FREE' : `${car.price.toLocaleString()} cr`}
+          {car.price === 0 ? 'FREE' : `$${car.price.toLocaleString()}`}
         </span>
 
         {selected && (
