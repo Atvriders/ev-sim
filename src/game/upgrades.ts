@@ -112,6 +112,16 @@ export const UPGRADES: Upgrade[] = [
     freeKw: 0,
   },
   {
+    id: 'adaptive_cruise',
+    name: 'Adaptive Cruise Control',
+    desc: 'Automatically matches your target speed to the posted speed limit — floors it when the limit rises, backs off before zones.',
+    price: 950,
+    efficiencyBonus: 0,
+    regenBonus: 0,
+    batteryBonus: 0,
+    freeKw: 0,
+  },
+  {
     id: 'route_planner',
     name: 'DC Fast Charge Planner',
     desc: 'Onboard nav pre-calculates every DC fast charger on your route. Shows estimated battery % on arrival at each stop and flags any gaps your current charge won\'t cover.',

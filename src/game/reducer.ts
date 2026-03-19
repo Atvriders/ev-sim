@@ -32,6 +32,7 @@ function buildInitialState(): GameState {
     isCharging: false,
     chargeRateKw: 0,
     chargingAtId: null,
+    queuedChargerId: null,
 
     totalMilesDriven: 0,
     totalKwhUsed: 0,
@@ -134,6 +135,7 @@ export function reducer(state: GameState, action: Action): GameState {
           isCharging: false,
           chargingAtId: null,
           chargeRateKw: 0,
+          queuedChargerId: null,
           positionMi: 0,
           speedMph: 0,
           currentKw: 0,
@@ -153,12 +155,27 @@ export function reducer(state: GameState, action: Action): GameState {
         isCharging: false,
         chargeRateKw: 0,
         chargingAtId: null,
+        queuedChargerId: null,
         speedMph: 0,
         currentKw: 0,
         notification: 'Drive abandoned.',
         notifKey: state.notifKey + 1,
       };
     }
+
+    case 'QUEUE_CHARGE': {
+      if (!state.driving) return state;
+      const route = getRoute(state.currentRoute ?? '');
+      const charger = route?.chargers.find(c => c.id === action.chargerId);
+      if (!charger) return state;
+      return notify(
+        { ...state, queuedChargerId: charger.id },
+        `Queued charge at ${charger.name}`
+      );
+    }
+
+    case 'CANCEL_QUEUE_CHARGE':
+      return { ...state, queuedChargerId: null };
 
     case 'START_CHARGE': {
       if (!state.driving) return state;
@@ -224,7 +241,10 @@ export function reducer(state: GameState, action: Action): GameState {
         if (pt.distanceMi <= state.positionMi) return pt.speedLimitMph;
         return lim;
       }, 65);
-      const effectiveTarget = Math.min(state.targetSpeedMph, currentSpeedLimit);
+      const hasAdaptiveCruise = state.upgrades.includes('adaptive_cruise');
+      // Adaptive Cruise: auto-set target to current speed limit each tick
+      const userTarget = hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph;
+      const effectiveTarget = Math.min(userTarget, currentSpeedLimit);
       const updates  = physicsTick(
         { ...state, targetSpeedMph: effectiveTarget },
         car, route?.terrain ?? [], upgrades, deltaS
@@ -238,11 +258,31 @@ export function reducer(state: GameState, action: Action): GameState {
       let next: GameState = {
         ...state,
         ...updates,
-        // Keep user's preferred target; effective limit enforced via physics below
-        targetSpeedMph: state.targetSpeedMph,
+        // Keep user's preferred target; adaptive cruise updates it to speed limit
+        targetSpeedMph: hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph,
         batteryDead: dead,
         routeComplete: complete && !dead,
       };
+
+      // ── Auto-charge: trigger START_CHARGE when car arrives at queued charger ──
+      if (state.queuedChargerId && !dead && !complete) {
+        const qc = route?.chargers.find(c => c.id === state.queuedChargerId);
+        if (qc && Math.abs(newPos - qc.positionMi) < 0.3) {
+          const rateKw = Math.min(qc.maxKw, car.maxChargeKw);
+          next = notify(
+            {
+              ...next,
+              isCharging: true,
+              chargingAtId: qc.id,
+              chargeRateKw: rateKw,
+              queuedChargerId: null,
+              speedMph: 0,
+              targetSpeedMph: 0,
+            },
+            `Auto-charging at ${qc.name}`
+          );
+        }
+      }
 
       if (complete && !dead) {
         const reward = route.reward;

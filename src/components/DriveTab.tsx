@@ -52,8 +52,9 @@ export default function DriveTab({ state, dispatch }: Props) {
   const { batteryBonus } = computeUpgradeStats(state.upgrades);
   const maxBat  = car.batteryKwh + batteryBonus;
   const batPct  = maxBat > 0 ? state.battery / maxBat : 0;
-  const hasPlanner   = state.upgrades.includes('route_planner');
-  const hasAutopilot = state.upgrades.includes('autopilot');
+  const hasPlanner       = state.upgrades.includes('route_planner');
+  const hasAutopilot     = state.upgrades.includes('autopilot');
+  const hasAdaptiveCruise = state.upgrades.includes('adaptive_cruise');
 
   // Speed limit at current position
   const speedLimit = route
@@ -67,7 +68,14 @@ export default function DriveTab({ state, dispatch }: Props) {
   const effMiKwh = car.efficiencyMiKwh;
   const estRange = (state.battery * effMiKwh).toFixed(0);
 
-  // Nearby chargers (within 5 mi ahead)
+  // Next charger ahead (within 10 mi) for the inline banner
+  const nextCharger = route
+    ? route.chargers
+        .filter(c => c.positionMi > state.positionMi - 0.5 && c.positionMi <= state.positionMi + 10)
+        .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null
+    : null;
+
+  // Nearby chargers (within 5 mi ahead) for the expanded list below
   const nearbyChargers = route
     ? route.chargers.filter(c =>
         c.positionMi >= state.positionMi - 0.5 &&
@@ -184,18 +192,82 @@ export default function DriveTab({ state, dispatch }: Props) {
         </div>
       </div>
 
+      {/* ── Charger Banner (inline, always visible while driving) ── */}
+      {state.driving && !state.isCharging && nextCharger && (() => {
+        const dist     = nextCharger.positionMi - state.positionMi;
+        const rate     = Math.min(nextCharger.maxKw, car.maxChargeKw);
+        const tier     = chargerTier(nextCharger.maxKw);
+        const atCharger = Math.abs(dist) < 0.3;
+        const isQueued  = state.queuedChargerId === nextCharger.id;
+        const kwhTo80   = Math.max(0, maxBat * 0.80 - state.battery);
+        const kwhToFull = Math.max(0, maxBat - state.battery);
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: atCharger ? '#0d2a1a' : '#161b22',
+            border: `1px solid ${atCharger ? '#3fb950' : tier.color}`,
+            borderRadius: 8, padding: '8px 12px',
+          }}>
+            <div style={{ fontSize: 20 }}>{atCharger ? '⚡' : isQueued ? '📍' : '🔌'}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#e6edf3' }}>
+                {nextCharger.name}
+                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: tier.color,
+                  background: '#21262d', border: `1px solid ${tier.color}`,
+                  borderRadius: 10, padding: '1px 6px' }}>{tier.label}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#8b949e' }}>
+                <strong style={{ color: tier.color }}>{rate.toFixed(1)} kW</strong>
+                {' · '}${nextCharger.pricePerKwh}/kWh
+                {' · '}{atCharger ? 'Here now' : `${dist.toFixed(1)} mi ahead`}
+                {' · '}+80%: {fmtTime(kwhTo80 / rate)} · Full: {fmtTime(kwhToFull / rate)}
+              </div>
+              {isQueued && (
+                <div style={{ fontSize: 11, color: '#3fb950', fontWeight: 600 }}>
+                  Will auto-charge on arrival
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              {atCharger && (
+                <button className="btn-success" style={{ fontSize: 12, padding: '4px 14px' }}
+                  onClick={() => dispatch({ type: 'START_CHARGE', chargerId: nextCharger.id })}>
+                  Charge
+                </button>
+              )}
+              {!atCharger && !isQueued && (
+                <button className="btn-primary" style={{ fontSize: 12, padding: '4px 12px' }}
+                  onClick={() => dispatch({ type: 'QUEUE_CHARGE', chargerId: nextCharger.id })}>
+                  Queue
+                </button>
+              )}
+              {isQueued && (
+                <button className="btn-warn" style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={() => dispatch({ type: 'CANCEL_QUEUE_CHARGE' })}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Controls ── */}
       {state.driving && (
         <div className="controls">
           {/* Speed slider */}
           {!state.isCharging && (
             <div className="speed-control">
-              <span className="speed-label">Target</span>
+              <span className="speed-label" title={hasAdaptiveCruise ? 'Adaptive Cruise active' : undefined}
+                style={{ color: hasAdaptiveCruise ? '#58a6ff' : undefined }}>
+                {hasAdaptiveCruise ? 'ACC' : 'Target'}
+              </span>
               <input
                 type="range"
                 min={20}
                 max={speedLimit}
                 step={5}
+                disabled={hasAdaptiveCruise}
                 value={Math.min(state.targetSpeedMph, speedLimit)}
                 onChange={e => dispatch({ type: 'SET_TARGET_SPEED', mph: +e.target.value })}
               />

@@ -18,7 +18,7 @@ export type UpgradeId =
   | 'aero_kit' | 'lightweight_wheels' | 'thermal_mgmt'
   | 'regen_boost' | 'battery_plus' | 'eco_chip'
   | 'solar_roof' | 'heat_pump' | 'performance_tires' | 'sport_tune'
-  | 'route_planner' | 'autopilot';
+  | 'route_planner' | 'autopilot' | 'adaptive_cruise';
 
 export interface Upgrade {
   id: UpgradeId;
@@ -95,6 +95,7 @@ export interface GameState {
   isCharging: boolean;
   chargeRateKw: number;
   chargingAtId: string | null;
+  queuedChargerId: string | null;  // pre-queued stop — auto-charges when car arrives
 
   // Stats
   totalMilesDriven: number;
@@ -116,6 +117,8 @@ export type Action =
   | { type: 'TOGGLE_PAUSE' }
   | { type: 'START_CHARGE'; chargerId: string }
   | { type: 'STOP_CHARGE' }
+  | { type: 'QUEUE_CHARGE'; chargerId: string }
+  | { type: 'CANCEL_QUEUE_CHARGE' }
   | { type: 'ABANDON_DRIVE' }
   | { type: 'BUY_CAR'; carId: string }
   | { type: 'SELECT_CAR'; carId: string }

@@ -11,6 +11,8 @@ A browser-based electric vehicle driving simulator. Manage battery, tackle hills
 - **Plan routes** — 8 routes from a 40-mile city loop to a 600-mile cross-country sprint
 - **Route Planner upgrade** — shows estimated battery % at every DC fast charger ahead and warns when a gap is unreachable
 - **Autopilot Module upgrade** — unlocks 50× and 100× simulation speed
+- **Queue charging** — click Queue on an upcoming charger to auto-stop and charge when you arrive
+- **Adaptive Cruise Control upgrade** — automatically matches your speed to the posted limit in every zone
 
 ## Canvas View
 
@@ -42,6 +44,7 @@ Brands: Tesla, Rivian, Ford, Chevy, BMW, Mercedes, Audi, Volkswagen, Hyundai, Ki
 | Low-Roll Tires | +4% efficiency, +3% regen |
 | Sport Tune | −5% efficiency, +10% regen |
 | Autopilot Module | Unlocks 50× and 100× time scale |
+| Adaptive Cruise Control | Auto-matches target speed to posted speed limit |
 | DC Fast Charge Planner | Shows DCFC stops ahead with arrival battery % |
 
 ## Stack
