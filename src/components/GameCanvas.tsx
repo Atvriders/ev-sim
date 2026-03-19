@@ -333,7 +333,9 @@ export default function GameCanvas({ state }: Props) {
       if (delta < -100) {
         trafficScrollRef.current = scrollPx;                     // new drive reset
       } else if (state.isCharging) {
-        trafficScrollRef.current += (28 / 3600 / MI_PER_PX) * (dtMs / 1000); // ~28 mph
+        // Advance at a fixed pixel rate so traffic visibly moves regardless of timeScale/zoom.
+        // 2 px per 16 ms frame → same-dir cars (~0.88×) cross the screen in ~9 s.
+        trafficScrollRef.current += 2.0 * (dtMs / 16);
       } else {
         trafficScrollRef.current += delta;
       }
