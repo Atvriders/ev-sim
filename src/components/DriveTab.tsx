@@ -208,14 +208,31 @@ export default function DriveTab({ state, dispatch }: Props) {
             );
           })()}
         </div>
-        <div className="battery-bar-track">
-          <div
-            className="battery-bar-fill"
-            style={{
-              width: `${(batPct * 100).toFixed(1)}%`,
-              background: batteryColor(batPct),
-            }}
-          />
+        <div className={`battery-bar-wrap${state.isCharging ? ' charging' : ''}`}>
+          <div className="battery-bar-track">
+            <div
+              className="battery-bar-fill"
+              style={{
+                width: `${(batPct * 100).toFixed(1)}%`,
+                background: batteryColor(batPct),
+              }}
+            />
+          </div>
+          {state.isCharging && (
+            <>
+              <div className="charge-sparks">
+                {[5,13,21,30,39,49,58,68,77,86,93].map((left, i) => (
+                  <div key={i} className="spark" style={{ left: `${left}%`, animationDelay: `${i * 60}ms` }} />
+                ))}
+              </div>
+              <svg className="charge-lightning" viewBox="0 0 100 22" preserveAspectRatio="none">
+                <polyline className="lightning-bolt" points="18,1 15,11 20,11 17,21" stroke="#ffee44" strokeWidth="1.8" fill="none" style={{ animationDelay: '0ms' }} />
+                <polyline className="lightning-bolt" points="38,1 35,10 41,10 38,21" stroke="#88ddff" strokeWidth="1.5" fill="none" style={{ animationDelay: '400ms' }} />
+                <polyline className="lightning-bolt" points="58,2 55,11 61,11 58,21" stroke="#ffee44" strokeWidth="1.8" fill="none" style={{ animationDelay: '900ms' }} />
+                <polyline className="lightning-bolt" points="78,1 75,10 81,10 78,21" stroke="#88ddff" strokeWidth="1.5" fill="none" style={{ animationDelay: '1400ms' }} />
+              </svg>
+            </>
+          )}
         </div>
       </div>
 

@@ -29,8 +29,40 @@ The driving canvas shows a **1-mile viewport** (zooms to 5 miles at 25×+ time s
 - Car silhouette matched to the model's body style (sedan, sport, SUV, hatchback, truck, van, compact)
 - Spinning 5-spoke wheels that rotate relative to ground speed
 - Speed in the HUD turns red when over the speed limit; US-style speed limit sign
+- **Route complete overlay** — on finish, a panel shows the route name and credits earned on the canvas
 
-## Charging
+### 4-lane road with live traffic
+
+- Two player-direction lanes (right side) and two oncoming lanes (left side) with a double yellow centre line
+- **12 traffic cars** (6 same-direction, 6 oncoming) using real EV body styles and seeded random colours
+- Oncoming cars approach from the right and pass on the left, correctly z-sorted by lane depth so nearer lanes overlap farther ones
+- **Traffic keeps moving during charging** — cars continue scrolling at ~28 mph even while the player is stopped at a charger
+
+### Air traffic
+
+- **4 planes** flying across the sky at varying altitudes, speeds and sizes, each with contrails, engine pods, windows, and tail fins
+- **1 helicopter** per route with animated spinning main rotor, tail rotor, and skids; hovers with a gentle sine-wave drift
+- **1 UFO** per route with a glowing dome, rotating rim lights that cycle colours, a pulsing underside glow, and an occasional tractor beam
+
+### Per-theme weather
+
+Weather is rendered in front of the cars as a foreground layer:
+
+| Theme | Weather |
+|---|---|
+| Coastal, Valley, Country | Rain — diagonal streaks + wet-road tint |
+| Alpine, Mountain | Snow — drifting flakes with sine drift |
+| Desert | Sandstorm — horizontal sweep layers + sky haze |
+| City | Drizzle — lighter, shorter streaks |
+
+## Charging UI
+
+The battery bar animates while charging:
+
+- **Shimmer sweep** — a bright highlight moves across the green fill
+- **Sparks** — yellow and blue particles fly upward above the bar
+- **Lightning bolts** — four SVG bolts flash above the bar at staggered intervals
+- The bar track glows green while plugged in
 
 The inline charger banner (always visible, no scrolling needed) shows:
 
