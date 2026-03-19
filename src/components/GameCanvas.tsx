@@ -281,9 +281,10 @@ const GROUND: Record<SceneTheme, [string,string]> = {
 // ── Component ──────────────────────────────────────────────────────────────
 export default function GameCanvas({ state }: Props) {
   const canvasRef        = useRef<HTMLCanvasElement>(null);
-  const trafficScrollRef = useRef<number>(0);
-  const lastScrollPxRef  = useRef<number>(0);
-  const lastTimeRef      = useRef<number>(0);
+  const trafficScrollRef  = useRef<number>(0); // oncoming scroll (increases = moves left)
+  const sameDirScrollRef  = useRef<number>(0); // same-dir scroll (decreases during charging = moves right)
+  const lastScrollPxRef   = useRef<number>(0);
+  const lastTimeRef       = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -332,16 +333,20 @@ export default function GameCanvas({ state }: Props) {
       const delta = scrollPx - lastScrollPxRef.current;
       lastScrollPxRef.current = scrollPx;
       if (delta < -100) {
-        trafficScrollRef.current = scrollPx;                     // new drive reset
+        trafficScrollRef.current  = scrollPx;  // new drive reset
+        sameDirScrollRef.current  = scrollPx;
       } else if (state.isCharging) {
-        // Advance at a fixed pixel rate so traffic visibly moves regardless of timeScale/zoom.
-        // 2 px per 16 ms frame → same-dir cars (~0.88×) cross the screen in ~9 s.
+        // Oncoming: keep moving left (toward player) — increase scroll
         trafficScrollRef.current += 2.0 * (dtMs / 16);
+        // Same-dir: should go forward (rightward) through static background — decrease scroll
+        sameDirScrollRef.current -= 2.0 * (dtMs / 16);
       } else {
         trafficScrollRef.current += delta;
+        sameDirScrollRef.current += delta;
       }
     }
-    const trafficScroll = trafficScrollRef.current;
+    const trafficScroll  = trafficScrollRef.current;  // oncoming
+    const sameDirScroll  = sameDirScrollRef.current;  // same-direction
 
     function miToX(mi: number) { return (mi - offsetMi) / MI_PER_PX; }
 
@@ -2483,7 +2488,7 @@ export default function GameCanvas({ state }: Props) {
         const carIdx = Math.floor(rngTraf() * TC_IDS.length);
         const colIdx = Math.floor(rngTraf() * TC_COLS.length);
         const laneY  = laneR < 0.5 ? 6 : 17;
-        const sx     = ((baseX - trafficScroll * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        const sx     = ((baseX - sameDirScroll * 0.88) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
         const approxMi = offsetMi + sx * MI_PER_PX;
         const ty = elToY(elevAt(approxMi)) + laneY;
