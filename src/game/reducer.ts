@@ -142,7 +142,7 @@ export function reducer(state: GameState, action: Action): GameState {
           speedMph: 0,
           currentKw: 0,
           currentRoute: route.id,
-          targetSpeedMph: 0,
+          targetSpeedMph: 65,
           battery: car.batteryKwh + batteryBonus, // full charge at start
           kwhChargedAtDriveStart: state.totalKwhCharged,
         },
