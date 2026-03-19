@@ -167,6 +167,7 @@ export default function DriveTab({ state, dispatch }: Props) {
           </span>
           {state.isCharging && (() => {
             const tier = chargerTier(state.chargeRateKw);
+            const activeCharger = route?.chargers.find(c => c.id === state.chargingAtId);
             const kwhTo80  = Math.max(0, maxBat * 0.80 - state.battery);
             const kwhToFull = Math.max(0, maxBat - state.battery);
             const hTo80  = kwhTo80  / state.chargeRateKw;
@@ -174,7 +175,18 @@ export default function DriveTab({ state, dispatch }: Props) {
             return (
               <span style={{ color: '#3fb950', fontWeight: 700, fontSize: 12 }}>
                 ⚡ <span style={{ color: tier.color }}>{tier.label}</span>
-                {' · '}{state.chargeRateKw.toFixed(1)} kW
+                {' · '}
+                {activeCharger && activeCharger.maxKw !== state.chargeRateKw ? (
+                  <span title="Charger max → Car limit → Actual">
+                    <span style={{ color: '#8b949e' }}>{activeCharger.maxKw.toFixed(0)} kW</span>
+                    {' → '}
+                    <span style={{ color: '#d29922' }}>{car.maxChargeKw.toFixed(0)} kW</span>
+                    {' → '}
+                    <span style={{ color: tier.color }}>{state.chargeRateKw.toFixed(1)} kW</span>
+                  </span>
+                ) : (
+                  <span style={{ color: tier.color }}>{state.chargeRateKw.toFixed(1)} kW</span>
+                )}
                 {' · '}+80%: {fmtTime(hTo80)}
                 {' · '}Full: {fmtTime(hToFull)}
               </span>
@@ -217,7 +229,11 @@ export default function DriveTab({ state, dispatch }: Props) {
                   borderRadius: 10, padding: '1px 6px' }}>{tier.label}</span>
               </div>
               <div style={{ fontSize: 11, color: '#8b949e' }}>
-                <strong style={{ color: tier.color }}>{rate.toFixed(1)} kW</strong>
+                <span title="Charger max">{nextCharger.maxKw.toFixed(0)} kW</span>
+                {' → '}
+                <span title="Car limit">{car.maxChargeKw.toFixed(0)} kW</span>
+                {' = '}
+                <strong style={{ color: tier.color }} title="Actual rate">{rate.toFixed(1)} kW</strong>
                 {' · '}${nextCharger.pricePerKwh}/kWh
                 {' · '}{atCharger ? 'Here now' : `${dist.toFixed(1)} mi ahead`}
                 {' · '}+80%: {fmtTime(kwhTo80 / rate)} · Full: {fmtTime(kwhToFull / rate)}
@@ -343,7 +359,14 @@ export default function DriveTab({ state, dispatch }: Props) {
                     </span>
                   </div>
                   <div className="charger-meta">
-                    {c.network} · <strong style={{ color: tier.color }}>{rate.toFixed(1)} kW</strong> · ${c.pricePerKwh}/kWh
+                    {c.network}
+                    {' · '}
+                    <span title="Charger max">{c.maxKw.toFixed(0)} kW</span>
+                    {' → '}
+                    <span title="Car limit">{car.maxChargeKw.toFixed(0)} kW</span>
+                    {' = '}
+                    <strong style={{ color: tier.color }} title="Actual rate">{rate.toFixed(1)} kW</strong>
+                    {' · '}${c.pricePerKwh}/kWh
                   </div>
                   <div className="charger-meta">
                     +80%: {fmtTime(kwhTo80 / rate)} · Full: {fmtTime(kwhToFull / rate)}
@@ -391,7 +414,14 @@ export default function DriveTab({ state, dispatch }: Props) {
                     })()}
                   </div>
                   <div className="charger-meta">
-                    {charger.network} · <strong style={{ color: chargerTier(charger.maxKw).color }}>{rate.toFixed(1)} kW</strong> · ${charger.pricePerKwh}/kWh
+                    {charger.network}
+                    {' · '}
+                    <span title="Charger max">{charger.maxKw.toFixed(0)} kW</span>
+                    {' → '}
+                    <span title="Car limit">{car.maxChargeKw.toFixed(0)} kW</span>
+                    {' = '}
+                    <strong style={{ color: chargerTier(charger.maxKw).color }} title="Actual rate">{rate.toFixed(1)} kW</strong>
+                    {' · '}${charger.pricePerKwh}/kWh
                   </div>
                   {!reachable && (
                     <div style={{ color: '#f85149', fontSize: 12, fontWeight: 600 }}>
