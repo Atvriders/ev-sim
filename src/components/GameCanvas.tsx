@@ -2277,7 +2277,7 @@ export default function GameCanvas({ state }: Props) {
     terrainPath(-22); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
     terrainPath(22);  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
     // Inner lane dividers (white dashes) — animate offset with scroll so lines flow as car moves
-    ctx.lineDashOffset = -(scrollPx % 32);
+    ctx.lineDashOffset = scrollPx % 32;
     terrainPath(-11); ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
     terrainPath(11);  ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
     ctx.setLineDash([]);
