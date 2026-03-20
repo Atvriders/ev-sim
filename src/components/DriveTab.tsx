@@ -1,7 +1,7 @@
 import type { GameState, Action } from '../game/types';
 import { getRoute } from '../game/routes';
 import { getCar } from '../game/cars';
-import { computeUpgradeStats, gradeAt } from '../game/physics';
+import { computeUpgradeStats, gradeAt, computeKw } from '../game/physics';
 import GameCanvas from './GameCanvas';
 
 interface Props {
@@ -98,28 +98,46 @@ export default function DriveTab({ state, dispatch }: Props) {
       )
     : [];
 
-  // Route planner: all remaining DC fast chargers ahead, with estimated arrival battery
+  // Route planner: only the stops this car actually needs, using physics-based efficiency
   const plannerStops = (hasPlanner && route && state.driving)
     ? (() => {
-        const dcChargers = route.chargers
+        // Physics efficiency at 65 mph flat — same method as the reducer's auto-queue
+        const cruiseKw     = computeKw(car, 65, 0, 0, state.upgrades);
+        const physEffMiKwh = cruiseKw > 0 ? 65 / cruiseKw : effMiKwh;
+        const safetyKwh    = maxBat * 0.05;
+
+        const allDcfc = route.chargers
           .filter(c => c.maxKw >= DCFC_MIN_KW && c.positionMi > state.positionMi)
           .sort((a, b) => a.positionMi - b.positionMi);
 
-        // Walk through stops; track battery and position incrementally
+        type Stop = { charger: typeof allDcfc[0]; arrBat: number; arrPct: number; reachable: boolean; rate: number; distFromHere: number };
+        const result: Stop[] = [];
         let simBat = state.battery;
         let simPos = state.positionMi;
-        return dcChargers.map(c => {
-          const dist     = c.positionMi - simPos;          // distance from last stop (or current pos)
-          const kwhNeed  = dist / effMiKwh;
-          const arrBat   = simBat - kwhNeed;
-          const arrPct   = arrBat / maxBat;
-          const reachable = arrBat > maxBat * 0.05;
-          // Assume driver charges to 80% at each stop; advance sim position
-          simBat = reachable ? Math.min(maxBat * 0.80, arrBat) : arrBat;
-          simPos = c.positionMi;
-          const rate = Math.min(c.maxKw, car.maxChargeKw + chargeRateBonus);
-          return { charger: c, dist, arrBat, arrPct, reachable, rate };
-        });
+
+        for (let i = 0; i < allDcfc.length; i++) {
+          const charger    = allDcfc[i];
+          const batHere    = simBat - (charger.positionMi - simPos) / physEffMiKwh;
+          const nextPos    = i + 1 < allDcfc.length ? allDcfc[i + 1].positionMi : route.distanceMi;
+          const batAtNext  = batHere - (nextPos - charger.positionMi) / physEffMiKwh;
+          const needStop   = batHere < safetyKwh || batAtNext < safetyKwh;
+
+          if (needStop) {
+            result.push({
+              charger,
+              arrBat:      batHere,
+              arrPct:      batHere / maxBat,
+              reachable:   batHere > 0,
+              rate:        Math.min(charger.maxKw, car.maxChargeKw + chargeRateBonus),
+              distFromHere: charger.positionMi - state.positionMi,
+            });
+            simBat = maxBat; // game charges to 100% at each stop
+          } else {
+            simBat = batHere; // pass through without charging
+          }
+          simPos = charger.positionMi;
+        }
+        return result;
       })()
     : null;
 
@@ -479,8 +497,8 @@ export default function DriveTab({ state, dispatch }: Props) {
       {/* ── Route Planner ── */}
       {plannerStops && plannerStops.length > 0 && (
         <div className="charger-list">
-          <h3>DC Fast Charge Plan</h3>
-          {plannerStops.map(({ charger, dist, arrBat, arrPct, reachable, rate }) => {
+          <h3>DC Fast Charge Plan — {car.brand} {car.name}</h3>
+          {plannerStops.map(({ charger, distFromHere, arrBat, arrPct, reachable, rate }) => {
             const pctColor = arrPct > 0.30 ? '#3fb950' : arrPct > 0.10 ? '#d29922' : '#f85149';
             return (
               <div key={charger.id} className="charger-item" style={{ opacity: reachable ? 1 : 0.65 }}>
@@ -522,19 +540,16 @@ export default function DriveTab({ state, dispatch }: Props) {
                     {(arrPct * 100).toFixed(0)}%
                   </div>
                   <div className="charger-meta">{arrBat.toFixed(1)} kWh</div>
-                  <div className="charger-meta">in {dist.toFixed(1)} mi</div>
+                  <div className="charger-meta">in {distFromHere.toFixed(1)} mi</div>
                 </div>
               </div>
             );
           })}
-          {plannerStops.length === 0 && (
-            <p style={{ color: '#8b949e', fontSize: 13 }}>No DC fast chargers remaining on route.</p>
-          )}
         </div>
       )}
       {hasPlanner && route && state.driving && plannerStops?.length === 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#8b949e' }}>
-          📡 Route Planner: No DC fast chargers ahead — finish line in {(route.distanceMi - state.positionMi).toFixed(1)} mi.
+          📡 {car.brand} {car.name} can complete this route without a charging stop — finish line in {(route.distanceMi - state.positionMi).toFixed(1)} mi.
         </div>
       )}
 
