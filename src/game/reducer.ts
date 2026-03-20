@@ -219,7 +219,7 @@ export function reducer(state: GameState, action: Action): GameState {
       const deltaS = (action.delta / 1000) * state.timeScale;
       const route  = getRoute(state.currentRoute ?? '');
       const car    = getCar(state.selectedCar);
-      const { batteryBonus, chargeRateBonus, fineMultiplier, v2gReturn } = computeUpgradeStats(state.upgrades);
+      const { batteryBonus, chargeRateBonus, fineMultiplier, v2gReturn, efficiencyMult } = computeUpgradeStats(state.upgrades);
       const maxBat = car.batteryKwh + batteryBonus;
 
       // ── Charging tick ────────────────────────────────────────────────────────
@@ -319,9 +319,9 @@ export function reducer(state: GameState, action: Action): GameState {
         }
       }
 
-      // ── Route Planner: auto-queue nearest DCFC ahead ─────────────────────────
+      // ── Route Planner: queue only the DCFC the car actually needs ────────────
       if (state.upgrades.includes('route_planner') && !next.isCharging && !dead && !complete) {
-        // Clear skipped charger once the car has passed it (so planner resumes for the next one)
+        // Clear skipped charger once the car has passed it
         let skipped = next.skippedChargerId;
         if (skipped) {
           const skippedCharger = route?.chargers.find(c => c.id === skipped);
@@ -330,12 +330,47 @@ export function reducer(state: GameState, action: Action): GameState {
             next = { ...next, skippedChargerId: null };
           }
         }
-        const nextDCFC = route?.chargers
-          // +0.6 keeps charger outside the auto-charge near-trigger window (0.5 mi before charger),
-          // preventing immediate re-queue of the charger the car just finished charging at
+
+        // Adjusted efficiency: upgrades reduce kW draw → more mi/kWh
+        const effMiKwh  = car.efficiencyMiKwh / efficiencyMult;
+        const safetyKwh = maxBat * 0.10;   // keep 10% buffer
+
+        const dcfcAhead = (route?.chargers ?? [])
           .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1 && c.id !== skipped)
-          .sort((a, b) => a.positionMi - b.positionMi)[0] ?? null;
-        const targetId = nextDCFC?.id ?? null;
+          .sort((a, b) => a.positionMi - b.positionMi);
+
+        // Walk chargers forward; find the first stop we genuinely need
+        let targetId: string | null = null;
+        let simBat = newBat;
+        let simPos = newPos;
+
+        for (let i = 0; i < dcfcAhead.length; i++) {
+          const charger = dcfcAhead[i];
+          const batHere = simBat - (charger.positionMi - simPos) / effMiKwh;
+
+          if (batHere < safetyKwh) {
+            // Would arrive critically low — stop here
+            targetId = charger.id;
+            break;
+          }
+
+          // Check if we can reach the next waypoint (next DCFC or finish) without charging here
+          const nextPos = i + 1 < dcfcAhead.length
+            ? dcfcAhead[i + 1].positionMi
+            : route.distanceMi;
+          const batNext = batHere - (nextPos - charger.positionMi) / effMiKwh;
+
+          if (batNext < safetyKwh) {
+            // Can't make it to the next waypoint — need to charge here
+            targetId = charger.id;
+            break;
+          }
+
+          // Car can skip this charger — advance simulation past it
+          simPos = charger.positionMi;
+          simBat = batHere;
+        }
+
         if (next.queuedChargerId !== targetId) {
           next = { ...next, queuedChargerId: targetId };
         }
