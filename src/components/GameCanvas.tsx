@@ -464,17 +464,24 @@ export default function GameCanvas({ state }: Props) {
       ctx.fillStyle = theme === 'desert' ? '#ffe098' : '#fff9e8'; ctx.fill();
     }
 
-    // ── Shooting star / meteor (occasional, time-triggered) ───────────────
+    // ── Shooting stars (5 independent, staggered so they fire at different times) ─
     {
-      const cycle = 9000; // ms per cycle
-      const phase = T % cycle;
-      if (phase < 700) {
-        const prog  = phase / 700;
-        const rngM  = makeRng(seed + Math.floor(T / cycle));
-        const sx2   = rngM() * W * 0.7 + W * 0.1;
+      const STARS = [
+        { cycle: 7000,  dur: 600,  offset: 0     },
+        { cycle: 9500,  dur: 750,  offset: 3100  },
+        { cycle: 11000, dur: 500,  offset: 5800  },
+        { cycle: 8200,  dur: 680,  offset: 1900  },
+        { cycle: 13000, dur: 820,  offset: 7400  },
+      ];
+      for (const s of STARS) {
+        const phase = (T + s.offset) % s.cycle;
+        if (phase >= s.dur) continue;
+        const prog  = phase / s.dur;
+        const rngM  = makeRng(seed + Math.floor((T + s.offset) / s.cycle) * 31 + s.offset);
+        const sx2   = rngM() * W * 0.75 + W * 0.05;
         const sy2   = rngM() * skyH * 0.45 + 4;
-        const len   = 60 + rngM() * 80;
-        const ang   = Math.PI * 0.22;
+        const len   = 55 + rngM() * 100;
+        const ang   = Math.PI * (0.18 + rngM() * 0.10); // slightly varied angle
         const ex    = sx2 + Math.cos(ang) * len * prog;
         const ey    = sy2 + Math.sin(ang) * len * prog;
         const tail  = Math.max(0, sx2 + Math.cos(ang) * len * (prog - 0.35));
@@ -483,11 +490,11 @@ export default function GameCanvas({ state }: Props) {
         const streak = ctx.createLinearGradient(tail, taily, ex, ey);
         streak.addColorStop(0, 'rgba(255,255,255,0)');
         streak.addColorStop(1, `rgba(255,255,220,${alpha * 0.9})`);
-        ctx.strokeStyle = streak; ctx.lineWidth = 1.8;
+        ctx.strokeStyle = streak; ctx.lineWidth = 1.5 + rngM() * 0.8;
         ctx.beginPath(); ctx.moveTo(tail, taily); ctx.lineTo(ex, ey); ctx.stroke();
         ctx.globalAlpha = alpha;
         ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(ex, ey, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex, ey, 1.5 + rngM(), 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
