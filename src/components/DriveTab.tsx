@@ -46,6 +46,16 @@ function fmtTime(hours: number): string {
   return `${s}s`;
 }
 
+/** Format elapsed seconds as trip time string */
+function fmtElapsed(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function DriveTab({ state, dispatch }: Props) {
   const car   = getCar(state.selectedCar);
   const route = state.currentRoute ? getRoute(state.currentRoute) : null;
@@ -55,6 +65,11 @@ export default function DriveTab({ state, dispatch }: Props) {
   const hasPlanner       = state.upgrades.includes('route_planner');
   const hasAutopilot     = state.upgrades.includes('autopilot');
   const hasAdaptiveCruise = state.upgrades.includes('adaptive_cruise');
+
+  // Trip elapsed time
+  const elapsedSec = state.driving && state.tripStartTime
+    ? Math.floor((Date.now() - state.tripStartTime) / 1000)
+    : 0;
 
   // Speed limit at current position
   const speedLimit = route
@@ -72,9 +87,10 @@ export default function DriveTab({ state, dispatch }: Props) {
   // Estimated range — use live efficiency when driving (kW draw at current speed),
   // fall back to EPA baseline when stopped or charging
   const effMiKwh = car.efficiencyMiKwh / efficiencyMult;
-  const liveEffMiKwh = (state.driving && !state.isCharging && state.currentKw > 0.5 && state.speedMph > 5)
+  const rawLiveEff = (state.driving && !state.isCharging && state.currentKw > 0.5 && state.speedMph > 5)
     ? state.speedMph / state.currentKw   // mi/h ÷ kW = mi/kWh at this instant
     : effMiKwh;
+  const liveEffMiKwh = isFinite(rawLiveEff) ? rawLiveEff : effMiKwh;
   const estRange = (state.battery * liveEffMiKwh).toFixed(0);
 
   // Next charger ahead (within 10 mi) for the inline banner.
@@ -199,7 +215,7 @@ export default function DriveTab({ state, dispatch }: Props) {
           <div className="gauge-label">Speed</div>
           <div
             className="gauge-value"
-            style={{ color: state.speedMph > speedLimit + 2 ? '#f85149' : undefined }}
+            style={{ color: state.speedMph > speedLimit + 5 ? '#f85149' : undefined }}
           >
             {state.speedMph.toFixed(0)}
           </div>
@@ -210,7 +226,7 @@ export default function DriveTab({ state, dispatch }: Props) {
             background: '#fff', border: '3px solid #111',
             borderRadius: 4, padding: '2px 6px', textAlign: 'center',
             lineHeight: 1.1, minWidth: 36,
-            boxShadow: state.speedMph > speedLimit + 2
+            boxShadow: state.speedMph > speedLimit + 5
               ? '0 0 8px 2px #f85149' : '0 1px 4px rgba(0,0,0,0.5)',
           }}>
             <div style={{ fontSize: 7, fontWeight: 800, color: '#111', letterSpacing: '0.04em' }}>SPEED</div>
@@ -226,11 +242,77 @@ export default function DriveTab({ state, dispatch }: Props) {
         </div>
 
         <div className="gauge">
+          <div className="gauge-label">Efficiency</div>
+          <div className="gauge-value" style={{ fontSize: 20 }}>
+            {liveEffMiKwh.toFixed(2)}
+          </div>
+          <div className="gauge-unit">mi/kWh</div>
+        </div>
+
+        <div className="gauge">
           <div className="gauge-label">Position</div>
           <div className="gauge-value">{state.positionMi.toFixed(1)}</div>
           <div className="gauge-unit">mi {route ? `/ ${route.distanceMi}` : ''}</div>
         </div>
+
+        {state.driving && (
+          <div className="gauge">
+            <div className="gauge-label">Trip Time</div>
+            <div className="gauge-value" style={{ fontSize: 20 }}>
+              {fmtElapsed(elapsedSec)}
+            </div>
+            <div className="gauge-unit">elapsed</div>
+          </div>
+        )}
       </div>
+
+      {/* ── Mini Route Progress Bar ── */}
+      {state.driving && route && (
+        <div style={{ position: 'relative', height: 20, background: '#21262d', borderRadius: 4, margin: '6px 0', overflow: 'visible' }}>
+          {/* Progress fill */}
+          <div style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0,
+            width: `${route.distanceMi > 0 ? Math.min(100, (state.positionMi / route.distanceMi) * 100).toFixed(1) : 0}%`,
+            background: 'linear-gradient(90deg, #1f6feb, #388bfd)',
+            borderRadius: 4,
+            transition: 'width 0.3s ease',
+          }} />
+          {/* Car position dot */}
+          <div style={{
+            position: 'absolute', top: '50%', transform: 'translate(-50%, -50%)',
+            left: `${route.distanceMi > 0 ? Math.min(100, (state.positionMi / route.distanceMi) * 100).toFixed(1) : 0}%`,
+            width: 12, height: 12, background: '#58a6ff', borderRadius: '50%',
+            border: '2px solid #fff', zIndex: 2,
+          }} />
+          {/* Charger markers */}
+          {route.chargers.map(c => {
+            const pct = route.distanceMi > 0 ? (c.positionMi / route.distanceMi) * 100 : 0;
+            const isPassed = state.positionMi > c.positionMi;
+            const isDcfc = c.maxKw >= 50;
+            return (
+              <div key={c.id} style={{
+                position: 'absolute', top: '50%', transform: 'translate(-50%, -50%)',
+                left: `${pct.toFixed(1)}%`,
+                width: isDcfc ? 8 : 5, height: isDcfc ? 8 : 5,
+                background: isPassed ? '#3fb950' : isDcfc ? '#d29922' : '#8b949e',
+                borderRadius: '50%', zIndex: 1,
+              }} title={`${c.name} (${c.maxKw} kW @ mi ${c.positionMi})`} />
+            );
+          })}
+          {/* Destination flag */}
+          <div style={{
+            position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 12,
+          }}>🏁</div>
+          {/* Distance label */}
+          <div style={{
+            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+            fontSize: 10, color: 'rgba(255,255,255,0.6)', pointerEvents: 'none', whiteSpace: 'nowrap',
+          }}>
+            {state.positionMi.toFixed(1)} / {route.distanceMi} mi
+          </div>
+        </div>
+      )}
 
       {/* ── Battery ── */}
       <div className="battery-row">
@@ -241,6 +323,11 @@ export default function DriveTab({ state, dispatch }: Props) {
           <span className="battery-kwh">
             {state.battery.toFixed(1)} / {maxBat.toFixed(1)} kWh
           </span>
+          {state.tripChargingCost > 0 && (
+            <span style={{ fontSize: 11, color: '#8b949e', marginLeft: 8 }}>
+              Trip cost: {state.tripChargingCost.toFixed(2)} cr
+            </span>
+          )}
           {state.isCharging && (() => {
             const activeCharger = route?.chargers.find(c => c.id === state.chargingAtId);
             const tier = chargerTier(activeCharger?.maxKw ?? state.chargeRateKw);
@@ -288,7 +375,7 @@ export default function DriveTab({ state, dispatch }: Props) {
             <>
               <div className="charge-sparks">
                 {[5,13,21,30,39,49,58,68,77,86,93].map((left, i) => (
-                  <div key={i} className="spark" style={{ left: `${left}%`, animationDelay: `${i * 60}ms` }} />
+                  <div key={left} className="spark" style={{ left: `${left}%`, animationDelay: `${i * 60}ms` }} />
                 ))}
               </div>
               <svg className="charge-lightning" viewBox="0 0 100 22" preserveAspectRatio="none">
@@ -307,7 +394,7 @@ export default function DriveTab({ state, dispatch }: Props) {
         const dist     = nextCharger.positionMi - state.positionMi;
         const rate     = Math.min(nextCharger.maxKw, car.maxChargeKw + chargeRateBonus);
         const tier     = chargerTier(nextCharger.maxKw);
-        const atCharger = Math.abs(dist) < 0.3;
+        const atCharger = Math.abs(dist) < 0.5;
         const isQueued  = state.queuedChargerId === nextCharger.id;
         const kwhTo80   = Math.max(0, maxBat * 0.80 - state.battery);
         const kwhToFull = Math.max(0, maxBat - state.battery);
@@ -371,11 +458,15 @@ export default function DriveTab({ state, dispatch }: Props) {
         <div className="controls">
           {/* Speed slider */}
           {!state.isCharging && (() => {
-            const overLimit = state.targetSpeedMph > speedLimit + 5;
-            const inTolerance = state.targetSpeedMph > speedLimit && state.targetSpeedMph <= speedLimit + 5;
+            // Effective target after economy mode clamp (matches what physics actually uses)
+            const effectiveTarget = state.economyMode ? Math.min(state.targetSpeedMph, 55) : state.targetSpeedMph;
+            const overLimit = effectiveTarget > speedLimit + 5;
+            const inTolerance = effectiveTarget > speedLimit && effectiveTarget <= speedLimit + 5;
+            // Fine icon based on actual speed — the fine fires on newSpeed, not target
+            const actuallyFined = state.speedMph > speedLimit + 5;
             return (
               <div className="speed-control">
-                <span className="speed-label" title={hasAdaptiveCruise ? 'Adaptive Cruise active' : undefined}
+                <span className="speed-label" title={hasAdaptiveCruise ? 'Adaptive Cruise active' : state.economyMode ? 'Economy mode active (max 55 mph)' : undefined}
                   style={{ color: hasAdaptiveCruise ? '#58a6ff' : overLimit ? '#f85149' : inTolerance ? '#d29922' : undefined }}>
                   {hasAdaptiveCruise ? 'ACC' : 'Target'}
                 </span>
@@ -389,9 +480,10 @@ export default function DriveTab({ state, dispatch }: Props) {
                   onChange={e => dispatch({ type: 'SET_TARGET_SPEED', mph: +e.target.value })}
                 />
                 <span className="speed-val" style={{ color: overLimit ? '#f85149' : inTolerance ? '#d29922' : undefined }}>
-                  {state.targetSpeedMph} mph
-                  {overLimit && <span style={{ fontSize: 10, marginLeft: 4 }}>🚨 fine</span>}
-                  {inTolerance && <span style={{ fontSize: 10, marginLeft: 4, color: '#d29922' }}>⚠️ +5</span>}
+                  {effectiveTarget} mph
+                  {state.economyMode && state.targetSpeedMph > 55 && <span style={{ fontSize: 10, marginLeft: 4, color: '#3fb950' }}>🍃 eco</span>}
+                  {actuallyFined && <span style={{ fontSize: 10, marginLeft: 4 }}>🚨 fine</span>}
+                  {!actuallyFined && inTolerance && <span style={{ fontSize: 10, marginLeft: 4, color: '#d29922' }}>⚠️ +5</span>}
                 </span>
               </div>
             );
@@ -430,6 +522,15 @@ export default function DriveTab({ state, dispatch }: Props) {
             Abandon
           </button>
 
+          {/* Economy Mode toggle */}
+          <button
+            className={state.economyMode ? 'btn-success' : 'btn-warn'}
+            onClick={() => dispatch({ type: 'TOGGLE_ECONOMY_MODE' })}
+            title="Economy Mode: clamp speed to 55 mph for maximum efficiency"
+          >
+            {state.economyMode ? '🌿 Eco ON' : '🌿 Eco'}
+          </button>
+
           {/* Stop charging */}
           {state.isCharging && (
             <button
@@ -449,7 +550,7 @@ export default function DriveTab({ state, dispatch }: Props) {
           {nearbyChargers.map(c => {
             const dist      = c.positionMi - state.positionMi;
             const rate      = Math.min(c.maxKw, car.maxChargeKw + chargeRateBonus);
-            const atCharger = Math.abs(dist) < 0.3;
+            const atCharger = Math.abs(dist) < 0.5;
             const tier      = chargerTier(c.maxKw);
             const kwhTo80   = Math.max(0, maxBat * 0.80 - state.battery);
             const kwhToFull = Math.max(0, maxBat - state.battery);
@@ -537,9 +638,9 @@ export default function DriveTab({ state, dispatch }: Props) {
                 </div>
                 <div style={{ textAlign: 'right', minWidth: 70 }}>
                   <div style={{ color: pctColor, fontWeight: 700, fontSize: 14 }}>
-                    {(arrPct * 100).toFixed(0)}%
+                    {Math.max(0, arrPct * 100).toFixed(0)}%
                   </div>
-                  <div className="charger-meta">{arrBat.toFixed(1)} kWh</div>
+                  <div className="charger-meta">{Math.max(0, arrBat).toFixed(1)} kWh</div>
                   <div className="charger-meta">in {distFromHere.toFixed(1)} mi</div>
                 </div>
               </div>

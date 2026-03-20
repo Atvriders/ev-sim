@@ -47,12 +47,17 @@ function CarCard({ car, state, dispatch, batteryBonus }: {
   const canBuy   = !owned && state.credits >= car.price;
   const effBat   = owned ? car.batteryKwh + batteryBonus : car.batteryKwh;
 
+  const canSell  = owned && state.ownedCars.length > 1 && !selected && car.price > 0;
+  const sellPrice = Math.max(50, Math.round(car.price * 0.4));
+
+  const estRange = Math.round(car.efficiencyMiKwh * effBat);
+
   let cls = 'car-card';
   if (selected) cls += ' selected';
   else if (owned) cls += ' owned';
 
   return (
-    <div key={car.id} className={cls}>
+    <div className={cls}>
       <div className="car-card-header">
         <span className="car-emoji">{car.emoji}</span>
         <div>
@@ -64,7 +69,14 @@ function CarCard({ car, state, dispatch, batteryBonus }: {
       <div className="car-stats">
         <div className="car-stat-row">
           <span className="cs-label">Range</span>
-          <span className="cs-val">{car.rangeEpa} mi</span>
+          <span className="cs-val">
+            {car.rangeEpa} mi
+            {owned && (
+              <span style={{ color: '#8b949e', fontSize: 11, marginLeft: 4 }}>
+                (~{estRange} mi est.)
+              </span>
+            )}
+          </span>
         </div>
         <div className="car-stat-row">
           <span className="cs-label">Efficiency</span>
@@ -86,35 +98,50 @@ function CarCard({ car, state, dispatch, batteryBonus }: {
           <span className="cs-label">Drag Cd</span>
           <span className="cs-val">{car.dragCd}</span>
         </div>
+        <div className="car-stat-row">
+          <span className="cs-label">Weight</span>
+          <span className="cs-val">{car.weightLbs.toFixed(0)} lbs</span>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         <span className={`car-price ${car.price === 0 ? 'free' : ''}`}>
           {car.price === 0 ? 'FREE' : `$${car.price.toLocaleString()}`}
         </span>
 
-        {selected && (
-          <span style={{ color: '#58a6ff', fontWeight: 700, fontSize: 13 }}>Selected</span>
-        )}
-        {owned && !selected && (
-          <button
-            className="btn-primary"
-            style={{ fontSize: 12, padding: '4px 12px' }}
-            onClick={() => dispatch({ type: 'SELECT_CAR', carId: car.id })}
-          >
-            Select
-          </button>
-        )}
-        {!owned && (
-          <button
-            className="btn-success"
-            style={{ fontSize: 12, padding: '4px 12px' }}
-            disabled={!canBuy}
-            onClick={() => dispatch({ type: 'BUY_CAR', carId: car.id })}
-          >
-            Buy
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {selected && (
+            <span style={{ color: '#58a6ff', fontWeight: 700, fontSize: 13 }}>Selected</span>
+          )}
+          {owned && !selected && (
+            <button
+              className="btn-primary"
+              style={{ fontSize: 12, padding: '4px 12px' }}
+              onClick={() => dispatch({ type: 'SELECT_CAR', carId: car.id })}
+            >
+              Select
+            </button>
+          )}
+          {canSell && !state.driving && (
+            <button
+              className="btn-danger"
+              style={{ fontSize: 12, padding: '4px 12px' }}
+              onClick={() => dispatch({ type: 'SELL_CAR', carId: car.id })}
+            >
+              Sell (${sellPrice.toLocaleString()})
+            </button>
+          )}
+          {!owned && (
+            <button
+              className="btn-success"
+              style={{ fontSize: 12, padding: '4px 12px' }}
+              disabled={!canBuy}
+              onClick={() => dispatch({ type: 'BUY_CAR', carId: car.id })}
+            >
+              Buy
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -123,9 +150,16 @@ function CarCard({ car, state, dispatch, batteryBonus }: {
 export default function CarsTab({ state, dispatch }: Props) {
   const { batteryBonus } = computeUpgradeStats(state.upgrades);
 
+  const totalFleetValue = state.ownedCars.reduce((sum, id) => {
+    const car = CARS.find(c => c.id === id);
+    return sum + (car ? car.price : 0);
+  }, 0);
+
   return (
     <div>
-      <p className="section-title">Fleet — {state.ownedCars.length} owned</p>
+      <p className="section-title">
+        Fleet — {state.ownedCars.length} owned · Value: ${totalFleetValue.toLocaleString()}
+      </p>
       <div className="car-grid">
         <GroupHeader label="Used / Classic (2011–2019)" count={usedCars.length} />
         {usedCars.map(car => (

@@ -9,9 +9,11 @@ A browser-based electric vehicle driving simulator. Manage battery, tackle hills
 - **Auto-stop charging** — charging stops automatically at 100% and the drive resumes
 - **Buy cars** from 50 real EV models split into Used/Classic (2011–2019) and New/Modern (2025+), each with accurate EPA efficiency and real-world pricing
 - **Install upgrades** — aerodynamics, regen boost, battery packs, solar roof, and more
-- **Plan routes** — 8 routes from a 40-mile city loop to a 600-mile cross-country sprint
+- **Plan routes** — 10 routes from a 40-mile city loop to a 600-mile cross-country sprint
 - **Queue charging** — click Queue on an upcoming charger; car auto-stops and charges on arrival
+- **Out of credits** — charging stops automatically if you run out of credits mid-session
 - **Speeding** — drive as fast as you want; up to 5 mph over the limit is a free tolerance zone, beyond that you rack up fines per mph per second
+- **Economy mode** — caps speed at 55 mph for maximum efficiency; works alongside ACC
 - **Destination landmark** — each route ends with a checkered-flag finish building on the canvas
 - **Drive starts at 0 mph** — accelerate to your chosen target speed after hitting Start
 
@@ -28,7 +30,7 @@ The driving canvas shows a **1-mile viewport** (zooms to 5 miles at 25×+ time s
 - Charger stations rendered on the road with glow when active
 - Car silhouette matched to the model's body style (sedan, sport, SUV, hatchback, truck, van, compact)
 - Spinning 5-spoke wheels that rotate relative to ground speed
-- Speed in the HUD turns red when over the speed limit; US-style speed limit sign
+- Speed in the HUD turns red when over the fine threshold (limit+5); US-style speed limit sign with glow
 - **Route complete overlay** — on finish, a panel shows the route name and credits earned on the canvas
 
 ### 4-lane road with live traffic
@@ -78,6 +80,24 @@ With the DC Fast Charge Planner upgrade installed:
 - The charger banner tracks **DC fast chargers only** — the planner manages those stops automatically
 - **L1/L2 chargers** still appear in the Nearby Chargers list for manual use
 - The planner auto-queues the next DCFC each tick so charging is fully hands-free
+- Manual queues are protected — the planner never clears a stop you queued yourself
+
+## Routes
+
+10 routes unlocked progressively as you complete trips:
+
+| Route | Distance | Difficulty | Theme |
+|---|---|---|---|
+| City Loop | 40 mi | Easy | City |
+| Coastal Cruise | 80 mi | Easy | Coastal |
+| Valley Run | 130 mi | Easy | Valley |
+| Mountain Pass | 160 mi | Medium | Mountain |
+| Interstate Haul | 220 mi | Medium | Interstate |
+| Desert Crossing | 280 mi | Medium | Desert |
+| Desert Dash | 280 mi | Hard | Desert |
+| Alpine Summit | 180 mi | Hard | Alpine |
+| Alpine Circuit | 350 mi | Hard | Alpine |
+| Cross-Country Sprint | 600 mi | Expert | Country |
 
 ## Cars
 
@@ -97,7 +117,7 @@ Brands: Tesla, Rivian, Ford, Chevy, BMW, Mercedes, Audi, Volkswagen, Hyundai, Ki
 | Regen Boost | 900 | +20% regen |
 | Battery Pack+ | 2,500 | +20 kWh capacity |
 | Eco Chip | 500 | +10% efficiency |
-| Solar Roof | 1,500 | +1.5 kW passive charge while driving |
+| Solar Roof | 1,500 | +1.5 kW passive charge while driving and while charging |
 | Heat Pump HVAC | 700 | +7% efficiency |
 | Low-Roll Tires | 400 | +4% efficiency, +3% regen |
 | Sport Tune | 1,000 | −5% efficiency, +10% regen |
@@ -116,7 +136,7 @@ Brands: Tesla, Rivian, Ford, Chevy, BMW, Mercedes, Audi, Volkswagen, Hyundai, Ki
 
 - React 18 + TypeScript + Vite
 - Canvas 2D for the terrain/driving view
-- LocalStorage autosave
+- Cookie-based autosave (every 5 seconds + immediate save on purchases and achievements)
 
 ## Running with Docker
 

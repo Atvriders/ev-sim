@@ -4,6 +4,18 @@ interface Props {
   state: GameState;
 }
 
+function effColor(eff: number): string {
+  if (eff >= 4.5) return '#3fb950';
+  if (eff >= 3.5) return '#d29922';
+  return '#f0883e';
+}
+
+function effLabel(eff: number): string {
+  if (eff >= 4.5) return 'Excellent';
+  if (eff >= 3.5) return 'Good';
+  return 'Average';
+}
+
 export default function LogTab({ state }: Props) {
   if (state.log.length === 0) {
     return (
@@ -16,9 +28,18 @@ export default function LogTab({ state }: Props) {
     );
   }
 
-  const totalMi  = state.totalMilesDriven;
-  const totalKwh = state.totalKwhUsed;
-  const avgEff   = totalKwh > 0 ? (totalMi / totalKwh).toFixed(2) : '—';
+  const totalMi    = state.totalMilesDriven;
+  const totalKwh   = state.totalKwhUsed;
+  const avgEff     = totalKwh > 0 ? (totalMi / totalKwh).toFixed(2) : '—';
+  const totalCredits = state.totalCreditsEarned ?? 0;
+
+  // Best efficiency trip (completed trips with kWh used > 0)
+  const completedTrips = state.log.filter(e => e.completed && e.kwhUsed > 0);
+  const bestEntry = completedTrips.reduce<typeof state.log[0] | null>((best, e) => {
+    if (!best) return e;
+    return (e.distanceMi / e.kwhUsed) > (best.distanceMi / best.kwhUsed) ? e : best;
+  }, null);
+  const bestEff = bestEntry ? (bestEntry.distanceMi / bestEntry.kwhUsed) : null;
 
   return (
     <div>
@@ -51,24 +72,57 @@ export default function LogTab({ state }: Props) {
           <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', marginBottom: 2 }}>Avg Efficiency</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{avgEff} <span style={{ fontSize: 12 }}>mi/kWh</span></div>
         </div>
+        <div>
+          <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', marginBottom: 2 }}>Total Credits</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{totalCredits.toLocaleString()}</div>
+        </div>
+        {bestEff !== null && bestEntry && (
+          <div>
+            <div style={{ fontSize: 11, color: '#8b949e', textTransform: 'uppercase', marginBottom: 2 }}>Best Trip Eff.</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: effColor(bestEff) }}>
+              {bestEff.toFixed(2)} <span style={{ fontSize: 12 }}>mi/kWh</span>
+            </div>
+            <div style={{ fontSize: 10, color: '#8b949e' }}>{bestEntry.routeName}</div>
+          </div>
+        )}
       </div>
 
       <div className="log-list">
-        {state.log.map((entry, i) => (
-          <div key={i} className={`log-item ${entry.completed ? '' : 'failed'}`}>
-            <div>
-              <div className="log-route">{entry.routeName}</div>
-              <div className="log-car">{entry.carName}</div>
+        {state.log.map((entry, i) => {
+          const eff = entry.kwhUsed > 0 ? entry.distanceMi / entry.kwhUsed : null;
+          const color = eff !== null ? effColor(eff) : '#8b949e';
+
+          return (
+            <div
+              key={`${entry.routeName}-${entry.distanceMi}-${i}`}
+              className={`log-item ${entry.completed ? '' : 'failed'}`}
+              style={{ borderLeft: `3px solid ${entry.completed ? '#3fb950' : '#f85149'}` }}
+            >
+              <div>
+                <div className="log-route">{entry.routeName}</div>
+                <div className="log-car">{entry.carName}</div>
+              </div>
+              <div className={`log-result ${entry.completed ? 'success' : 'fail'}`}>
+                {entry.completed ? `+${entry.creditsEarned} cr` : 'FAILED'}
+              </div>
+              <div className="log-stats">
+                {entry.distanceMi.toFixed(1)} mi · {entry.kwhUsed.toFixed(1)} kWh used
+                {entry.kwhCharged > 0 && (
+                  <span style={{ color: '#58a6ff' }}> · ⚡ {entry.kwhCharged.toFixed(1)} kWh charged</span>
+                )}
+                {eff !== null && (
+                  <span>
+                    {' · '}
+                    <span style={{ color }}>{eff.toFixed(2)} mi/kWh</span>
+                    <span style={{ fontSize: 10, marginLeft: 4, color }}>
+                      {effLabel(eff)}
+                    </span>
+                  </span>
+                )}
+              </div>
             </div>
-            <div className={`log-result ${entry.completed ? 'success' : 'fail'}`}>
-              {entry.completed ? `+${entry.creditsEarned} cr` : 'FAILED'}
-            </div>
-            <div className="log-stats">
-              {entry.distanceMi.toFixed(1)} mi · {entry.kwhUsed.toFixed(1)} kWh used
-              {entry.kwhCharged > 0 ? ` · ${entry.kwhCharged.toFixed(1)} kWh charged` : ''}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

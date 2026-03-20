@@ -12,6 +12,11 @@ type SavedFields = Pick<GameState,
   | 'battery'
   | 'totalMilesDriven' | 'totalKwhUsed' | 'totalKwhCharged'
   | 'tab'
+  | 'totalCreditsEarned'
+  | 'achievements'
+  | 'bestTimes'
+  | 'bestEfficiency'
+  | 'economyMode'
 >;
 
 function extractSaved(state: GameState): SavedFields {
@@ -26,6 +31,11 @@ function extractSaved(state: GameState): SavedFields {
     totalKwhUsed:      state.totalKwhUsed,
     totalKwhCharged:   state.totalKwhCharged,
     tab:               state.tab,
+    totalCreditsEarned: state.totalCreditsEarned,
+    achievements:      state.achievements,
+    bestTimes:         state.bestTimes,
+    bestEfficiency:    state.bestEfficiency,
+    economyMode:       state.economyMode,
   };
 }
 

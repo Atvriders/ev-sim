@@ -225,6 +225,65 @@ export const ROUTES: Route[] = [
       { id: 'cc_sc_d', name: 'Pacific Supercharger',   network: 'Tesla',             positionMi: 575, maxKw: 250, pricePerKwh: 0.25 },
     ],
   },
+
+  // ── Hard (additional) ────────────────────────────────────────────────────────
+  {
+    id: 'desert_dash',
+    name: 'Desert Dash',
+    description: 'Scorching desert highway with sparse charging options. Heat saps efficiency — plan carefully.',
+    distanceMi: 280,
+    difficulty: 'Hard',
+    reward: 1400,
+    unlockAfterTrips: 8,
+    terrain: [
+      { distanceMi: 0,   elevationFt: 1200, speedLimitMph: 75 },
+      { distanceMi: 30,  elevationFt: 1050, speedLimitMph: 80 },
+      { distanceMi: 60,  elevationFt: 900,  speedLimitMph: 80 },
+      { distanceMi: 90,  elevationFt: 1150, speedLimitMph: 75 },
+      { distanceMi: 130, elevationFt: 800,  speedLimitMph: 80 },
+      { distanceMi: 170, elevationFt: 1100, speedLimitMph: 75 },
+      { distanceMi: 210, elevationFt: 950,  speedLimitMph: 80 },
+      { distanceMi: 250, elevationFt: 1000, speedLimitMph: 75 },
+      { distanceMi: 280, elevationFt: 900,  speedLimitMph: 70 },
+    ],
+    chargers: [
+      { id: 'ddash_sc_a',  name: 'Joshua Tree Supercharger',    network: 'Tesla',             positionMi: 65,  maxKw: 250, pricePerKwh: 0.28 },
+      { id: 'ddash_ea_a',  name: 'Mojave EA Station',           network: 'Electrify America', positionMi: 130, maxKw: 350, pricePerKwh: 0.30 },
+      { id: 'ddash_l2_a',  name: 'Desert Oasis Level 2',        network: 'ChargePoint',       positionMi: 190, maxKw: 19.2,pricePerKwh: 0.18 },
+      { id: 'ddash_ev_a',  name: 'Dunes EVgo',                  network: 'EVgo',              positionMi: 245, maxKw: 150, pricePerKwh: 0.32 },
+    ],
+  },
+
+  // ── Expert (additional) ──────────────────────────────────────────────────────
+  {
+    id: 'alpine_summit',
+    name: 'Alpine Summit',
+    description: 'A brutal ascent to 11,000 ft then a regen-rich descent. Only for highly upgraded EVs.',
+    distanceMi: 180,
+    difficulty: 'Expert',
+    reward: 2000,
+    unlockAfterTrips: 12,
+    terrain: [
+      { distanceMi: 0,   elevationFt: 3000,  speedLimitMph: 55 },
+      { distanceMi: 15,  elevationFt: 4800,  speedLimitMph: 45 },
+      { distanceMi: 30,  elevationFt: 6500,  speedLimitMph: 45 },
+      { distanceMi: 45,  elevationFt: 8200,  speedLimitMph: 40 },
+      { distanceMi: 60,  elevationFt: 10000, speedLimitMph: 35 },
+      { distanceMi: 75,  elevationFt: 11200, speedLimitMph: 35 },
+      { distanceMi: 90,  elevationFt: 10500, speedLimitMph: 40 },
+      { distanceMi: 110, elevationFt: 8000,  speedLimitMph: 45 },
+      { distanceMi: 130, elevationFt: 5500,  speedLimitMph: 50 },
+      { distanceMi: 150, elevationFt: 4000,  speedLimitMph: 55 },
+      { distanceMi: 165, elevationFt: 3500,  speedLimitMph: 55 },
+      { distanceMi: 180, elevationFt: 3200,  speedLimitMph: 55 },
+    ],
+    chargers: [
+      { id: 'asum_l2_a',  name: 'Base Camp Level 2',    network: 'ChargePoint',       positionMi: 20,  maxKw: 7.2,  pricePerKwh: 0.14 },
+      { id: 'asum_sc_a',  name: 'Midpoint Supercharger', network: 'Tesla',             positionMi: 55,  maxKw: 250,  pricePerKwh: 0.25 },
+      { id: 'asum_ea_a',  name: 'Summit EA Station',     network: 'Electrify America', positionMi: 85,  maxKw: 350,  pricePerKwh: 0.27 },
+      { id: 'asum_ev_a',  name: 'Descent Valley EVgo',   network: 'EVgo',              positionMi: 140, maxKw: 100,  pricePerKwh: 0.30 },
+    ],
+  },
 ];
 
 export const ROUTE_MAP: Record<string, Route> = Object.fromEntries(

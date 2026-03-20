@@ -103,15 +103,27 @@ export interface GameState {
   queuedChargerId: string | null;  // pre-queued stop — auto-charges when car arrives
   skippedChargerId: string | null; // user-cancelled stop — planner won't re-queue until passed
 
+  // Drive mode
+  economyMode: boolean;            // clamp speed to ~55 mph for max efficiency
+
   // Stats
   totalMilesDriven: number;
   totalKwhUsed: number;
   totalKwhCharged: number;
+  totalCreditsEarned: number;      // lifetime total credits earned from routes
   kwhChargedAtDriveStart: number;  // snapshot at START_DRIVE for per-trip log accuracy
+  kwhUsedAtDriveStart: number;     // snapshot at START_DRIVE for per-trip kWh-used accuracy
+  tripStartTime: number | null;    // Date.now() when current drive started
+  tripChargingCost: number;        // credits spent on charging this trip
   log: DriveLog[];
 
+  // Achievements & bests
+  achievements: string[];                    // unlocked achievement IDs
+  bestTimes: Record<string, number>;         // routeId -> best seconds
+  bestEfficiency: Record<string, number>;    // routeId -> best mi/kWh
+
   // UI
-  tab: 'drive' | 'cars' | 'upgrades' | 'routes' | 'log';
+  tab: 'drive' | 'cars' | 'upgrades' | 'routes' | 'log' | 'stats';
   notification: string;
   notifKey: number;
 }
@@ -129,5 +141,7 @@ export type Action =
   | { type: 'ABANDON_DRIVE' }
   | { type: 'BUY_CAR'; carId: string }
   | { type: 'SELECT_CAR'; carId: string }
+  | { type: 'SELL_CAR'; carId: string }
   | { type: 'BUY_UPGRADE'; upgradeId: UpgradeId }
+  | { type: 'TOGGLE_ECONOMY_MODE' }
   | { type: 'SET_TAB'; tab: GameState['tab'] };

@@ -7,6 +7,7 @@ import CarsTab      from './components/CarsTab';
 import UpgradesTab  from './components/UpgradesTab';
 import RoutesTab    from './components/RoutesTab';
 import LogTab       from './components/LogTab';
+import StatsTab     from './components/StatsTab';
 
 const TABS = [
   { id: 'drive',    label: '🚗 Drive'    },
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'upgrades', label: '🔧 Upgrades' },
   { id: 'routes',   label: '🗺️ Routes'   },
   { id: 'log',      label: '📋 Log'      },
+  { id: 'stats',    label: '🏆 Stats'    },
 ] as const;
 
 export default function App() {
@@ -26,24 +28,26 @@ export default function App() {
     function frame(ts: number) {
       const delta = lastRef.current ? ts - lastRef.current : 16;
       lastRef.current = ts;
-      dispatch({ type: 'TICK', delta: Math.min(delta, 200) });
+      dispatch({ type: 'TICK', delta: Math.min(delta, 100) });
       rafRef.current = requestAnimationFrame(frame);
     }
     rafRef.current = requestAnimationFrame(frame);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, []);
 
-  // Autosave every 5 seconds
+  // Autosave every 5 seconds — use a ref so the interval isn't recreated on every tick
+  const stateRef = useRef(state);
+  stateRef.current = state;
   useEffect(() => {
-    const id = setInterval(() => saveGame(state), 5000);
+    const id = setInterval(() => saveGame(stateRef.current), 5000);
     return () => clearInterval(id);
-  }, [state]);
+  }, []);
 
   // Immediate save on any purchase or progression event so a refresh never loses progress
   useEffect(() => {
     saveGame(state);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.totalTrips, state.batteryDead, state.upgrades, state.ownedCars, state.credits]);
+  }, [state.totalTrips, state.batteryDead, state.upgrades, state.ownedCars, state.credits, state.achievements]);
 
   const car = getCar(state.selectedCar);
 
@@ -88,6 +92,7 @@ export default function App() {
         {state.tab === 'upgrades' && <UpgradesTab state={state} dispatch={dispatch} />}
         {state.tab === 'routes'   && <RoutesTab   state={state} dispatch={dispatch} />}
         {state.tab === 'log'      && <LogTab      state={state} />}
+        {state.tab === 'stats'    && <StatsTab    state={state} />}
       </div>
 
       {/* ── Toast ── */}

@@ -340,6 +340,8 @@ input[type='range'] {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .game-canvas {
@@ -420,54 +422,6 @@ input[type='range'] {
 
 .car-price { font-size: 13px; font-weight: 700; color: var(--yellow); }
 .car-price.free { color: var(--green); }
-
-/* ── Upgrades Tab ────────────────────────────────────────────────────────── */
-.upgrade-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.upgrade-card {
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-
-.upgrade-card.owned { border-color: var(--green); opacity: 0.75; }
-
-.upgrade-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 6px;
-}
-
-.upgrade-name  { font-size: 15px; font-weight: 700; }
-.upgrade-price { font-size: 13px; font-weight: 700; color: var(--yellow); }
-.upgrade-desc  { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-
-.upgrade-bonuses {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.bonus-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-}
-
-.bonus-tag.efficiency { border-color: var(--accent); color: var(--accent); }
-.bonus-tag.regen      { border-color: var(--green);  color: var(--green);  }
-.bonus-tag.battery    { border-color: var(--yellow); color: var(--yellow); }
-.bonus-tag.solar      { border-color: var(--orange); color: var(--orange); }
-.bonus-tag.negative   { border-color: var(--red);    color: var(--red);    }
 
 /* ── Routes Tab ──────────────────────────────────────────────────────────── */
 .route-list {
@@ -586,6 +540,7 @@ input[type='range'] {
 @media (max-width: 600px) {
   .hud { grid-template-columns: repeat(2, 1fr); }
   .car-grid { grid-template-columns: 1fr; }
-  .upgrade-grid { grid-template-columns: 1fr; }
   .topbar-title { font-size: 15px; }
 }
+
+

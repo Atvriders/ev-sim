@@ -51,6 +51,19 @@ export function gradeAt(
 ): number {
   if (terrain.length < 2) return 0;
 
+  // Clamp to route bounds so grade is always a meaningful segment value
+  if (positionMi <= terrain[0].distanceMi) {
+    const lo = terrain[0], hi = terrain[1];
+    const dM = (hi.distanceMi - lo.distanceMi) * MI_TO_M;
+    return dM === 0 ? 0 : ((hi.elevationFt - lo.elevationFt) * 0.3048) / dM;
+  }
+  const last = terrain[terrain.length - 1];
+  if (positionMi >= last.distanceMi) {
+    const lo = terrain[terrain.length - 2], hi = last;
+    const dM = (hi.distanceMi - lo.distanceMi) * MI_TO_M;
+    return dM === 0 ? 0 : ((hi.elevationFt - lo.elevationFt) * 0.3048) / dM;
+  }
+
   // Find surrounding terrain points
   let lo = terrain[0], hi = terrain[terrain.length - 1];
   for (let i = 0; i < terrain.length - 1; i++) {
@@ -126,9 +139,10 @@ export function computeKw(
   const kw       = pTotal / 1000;
 
   if (kw < 0) {
-    // Regen: cap at maxChargeKw for regen and scale by regen multiplier
+    // Regen: cap by motor regen ability (50% of charge rate, min 20 kW floor so low-spec cars aren't crippled)
     // freeKw (solar/suspension) also contributes to charging during regen — add, not subtract
-    const regenKw = Math.min(Math.abs(kw) * regenMult, car.maxChargeKw * 0.3);
+    const regenCap = Math.max(car.maxChargeKw * 0.5, 20);
+    const regenKw  = Math.min(Math.abs(kw) * regenMult, regenCap);
     return -(regenKw + freeKw);
   }
 
@@ -160,11 +174,12 @@ export function physicsTick(
 
   const newSpeedMph = Math.max(0, Math.min(speedMph + accelMphS * deltaS, targetSpeedMph));
 
-  // Grade at current position
-  const grade = gradeAt(positionMi, terrain);
-
   // kW this tick (average of start/end speed for energy)
   const avgSpeed = (speedMph + newSpeedMph) / 2;
+
+  // Grade sampled at the midpoint of the tick for a better average
+  const midPos = positionMi + (avgSpeed * deltaS / 3600) / 2;
+  const grade = gradeAt(midPos, terrain);
   const upgradeIds = upgrades.map(u => u.id);
   const kw = computeKw(car, avgSpeed, grade, accelMphS, upgradeIds);
 

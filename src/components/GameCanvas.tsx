@@ -6,8 +6,8 @@ import { computeUpgradeStats } from '../game/physics';
 
 interface Props { state: GameState; }
 
-const W = 800;
-const H = 240;
+const W = 1200;
+const H = 320;
 
 // ── RNG helpers ────────────────────────────────────────────────────────────
 function makeRng(seed: number) {
@@ -15,7 +15,7 @@ function makeRng(seed: number) {
   return () => {
     s = Math.imul(s ^ (s >>> 15), s | 1);
     s ^= s + Math.imul(s ^ (s >>> 7), s | 61);
-    return ((s ^ (s >>> 14)) >>> 0) / 0xffffffff;
+    return ((s ^ (s >>> 14)) >>> 0) / 0x100000000;
   };
 }
 function strSeed(str: string): number {
@@ -168,9 +168,8 @@ function drawSUV(ctx: CanvasRenderingContext2D, color: string, angle: number) {
     [[-23,-b-31],[-2,-b-31],[-2,-b-14],[-20,-b-14]],
     [29,-b-7,3.5,2.5], [-29,-b-7,3.5,2.5]
   );
-  const bv = WR;
   ctx.beginPath();
-  ctx.moveTo(2,-bv-31); ctx.lineTo(20,-bv-31); ctx.lineTo(25,-bv-20); ctx.lineTo(16,-bv-14); ctx.lineTo(2,-bv-14);
+  ctx.moveTo(2,-b-31); ctx.lineTo(20,-b-31); ctx.lineTo(25,-b-20); ctx.lineTo(16,-b-14); ctx.lineTo(2,-b-14);
   ctx.closePath();
   ctx.fillStyle = 'rgba(160,210,240,0.35)'; ctx.fill();
   ctx.strokeStyle = color; ctx.lineWidth = 2.5;
@@ -252,6 +251,8 @@ const ROUTE_THEME: Record<string, SceneTheme> = {
   desert_crossing: 'desert',
   alpine_circuit:  'alpine',
   cross_country:   'country',
+  desert_dash:     'desert',
+  alpine_summit:   'alpine',
 };
 
 // sky gradient stops [top, midH, midL, horizon]
@@ -292,6 +293,13 @@ export default function GameCanvas({ state }: Props) {
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     if (!ctx) return;
 
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.scale(dpr, dpr);
+
     ctx.clearRect(0, 0, W, H);
 
     const route = state.currentRoute ? getRoute(state.currentRoute) : null;
@@ -330,6 +338,9 @@ export default function GameCanvas({ state }: Props) {
     {
       const dtMs  = lastTimeRef.current ? T - lastTimeRef.current : 16;
       lastTimeRef.current = T;
+      if (lastScrollPxRef.current === 0 && scrollPx > 0) {
+        lastScrollPxRef.current = scrollPx;
+      }
       const delta = scrollPx - lastScrollPxRef.current;
       lastScrollPxRef.current = scrollPx;
       if (delta < -100) {
@@ -365,7 +376,9 @@ export default function GameCanvas({ state }: Props) {
       if (mi >= terrain[terrain.length - 1].distanceMi) return terrain[terrain.length - 1].elevationFt;
       for (let i = 0; i < terrain.length - 1; i++) {
         if (terrain[i].distanceMi <= mi && terrain[i+1].distanceMi >= mi) {
-          const t = (mi - terrain[i].distanceMi) / (terrain[i+1].distanceMi - terrain[i].distanceMi);
+          const denom = terrain[i+1].distanceMi - terrain[i].distanceMi;
+          if (denom < 0.0001) return terrain[i].elevationFt;
+          const t = (mi - terrain[i].distanceMi) / denom;
           return terrain[i].elevationFt + t * (terrain[i+1].elevationFt - terrain[i].elevationFt);
         }
       }
@@ -484,7 +497,7 @@ export default function GameCanvas({ state }: Props) {
         const ang   = Math.PI * (0.18 + rngM() * 0.10); // slightly varied angle
         const ex    = sx2 + Math.cos(ang) * len * prog;
         const ey    = sy2 + Math.sin(ang) * len * prog;
-        const tail  = Math.max(0, sx2 + Math.cos(ang) * len * (prog - 0.35));
+        const tail  = sx2 + Math.cos(ang) * len * (prog - 0.35);
         const taily = sy2 + Math.sin(ang) * len * (prog - 0.35);
         const alpha = prog < 0.5 ? prog * 2 : (1 - prog) * 2;
         const streak = ctx.createLinearGradient(tail, taily, ex, ey);
@@ -2284,7 +2297,7 @@ export default function GameCanvas({ state }: Props) {
     terrainPath(-22); ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
     terrainPath(22);  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
     // Inner lane dividers (white dashes) — animate offset with scroll so lines flow as car moves
-    ctx.lineDashOffset = scrollPx % 32;
+    ctx.lineDashOffset = -(scrollPx % 32);
     terrainPath(-11); ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
     terrainPath(11);  ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 1.2; ctx.setLineDash([18,14]); ctx.stroke();
     ctx.setLineDash([]);
@@ -2512,15 +2525,15 @@ export default function GameCanvas({ state }: Props) {
         const carIdx = Math.floor(rngOnc() * TC_IDS.length);
         const colIdx = Math.floor(rngOnc() * TC_COLS.length);
         const laneY  = laneR < 0.5 ? -6 : -17;
-        const sx     = ((baseX - trafficScroll * 2.0) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
+        const sx     = ((baseX - trafficScroll * 1.0) % (W * 5) + W * 5) % (W * 5) - W * 0.15;
         if (sx < -60 || sx > W + 60) continue;
         const approxMi = offsetMi + sx * MI_PER_PX;
         const ty = elToY(elevAt(approxMi)) + laneY;
         cars.push({ sx, ty, laneY, carIdx, colIdx, flip: true });
       }
 
-      // Sort: lower laneY (further from viewer) drawn first, higher laneY on top
-      cars.sort((a, b) => a.laneY - b.laneY);
+      // Sort: lower ty (further from viewer) drawn first, higher ty on top
+      cars.sort((a, b) => a.ty - b.ty);
 
       for (const c of cars) {
         ctx.save();
@@ -2635,8 +2648,8 @@ export default function GameCanvas({ state }: Props) {
         theme === 'country'    ? 'rain'    :
         'clear';
 
-      // Animate using scrollPx as a time base (increases every frame)
-      const T = scrollPx;
+      // Animate using real time so precipitation moves even when stopped
+      const T = performance.now();
 
       if (weatherType === 'rain' || weatherType === 'drizzle') {
         const count  = weatherType === 'rain' ? 120 : 55;
@@ -2758,7 +2771,7 @@ export default function GameCanvas({ state }: Props) {
 
   return (
     <div className="canvas-wrap">
-      <canvas ref={canvasRef} width={W} height={H} className="game-canvas" />
+      <canvas ref={canvasRef} className="game-canvas" />
     </div>
   );
 }
