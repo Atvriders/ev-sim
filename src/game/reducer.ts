@@ -155,6 +155,8 @@ export function reducer(state: GameState, action: Action): GameState {
         ...state,
         driving: false,
         paused: false,
+        batteryDead: false,
+        routeComplete: false,
         isCharging: false,
         chargeRateKw: 0,
         chargingAtId: null,
@@ -292,8 +294,8 @@ export function reducer(state: GameState, action: Action): GameState {
       let next: GameState = {
         ...state,
         ...updates,
-        // Keep user's preferred target; adaptive cruise updates it to speed limit
-        targetSpeedMph: hasAdaptiveCruise ? currentSpeedLimit : state.targetSpeedMph,
+        // Keep user's preferred target; adaptive cruise stores limit+5 (actual physics target)
+        targetSpeedMph: hasAdaptiveCruise ? currentSpeedLimit + 5 : state.targetSpeedMph,
         batteryDead: dead,
         routeComplete: complete && !dead,
         credits: fine > 0 ? Math.max(0, (updates.credits ?? state.credits) - fine) : (updates.credits ?? state.credits),
@@ -396,7 +398,7 @@ export function reducer(state: GameState, action: Action): GameState {
         next = notify(
           {
             ...next,
-            credits: state.credits + totalEarned,
+            credits: next.credits + totalEarned,
             totalTrips: state.totalTrips + 1,
             driving: false,
             speedMph: 0,

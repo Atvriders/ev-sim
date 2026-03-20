@@ -49,7 +49,7 @@ function fmtTime(hours: number): string {
 export default function DriveTab({ state, dispatch }: Props) {
   const car   = getCar(state.selectedCar);
   const route = state.currentRoute ? getRoute(state.currentRoute) : null;
-  const { batteryBonus, chargeRateBonus, v2gReturn } = computeUpgradeStats(state.upgrades);
+  const { batteryBonus, chargeRateBonus, v2gReturn, efficiencyMult } = computeUpgradeStats(state.upgrades);
   const maxBat  = car.batteryKwh + batteryBonus;
   const batPct  = maxBat > 0 ? state.battery / maxBat : 0;
   const hasPlanner       = state.upgrades.includes('route_planner');
@@ -71,7 +71,7 @@ export default function DriveTab({ state, dispatch }: Props) {
 
   // Estimated range — use live efficiency when driving (kW draw at current speed),
   // fall back to EPA baseline when stopped or charging
-  const effMiKwh = car.efficiencyMiKwh;
+  const effMiKwh = car.efficiencyMiKwh / efficiencyMult;
   const liveEffMiKwh = (state.driving && !state.isCharging && state.currentKw > 0.5 && state.speedMph > 5)
     ? state.speedMph / state.currentKw   // mi/h ÷ kW = mi/kWh at this instant
     : effMiKwh;
@@ -105,16 +105,18 @@ export default function DriveTab({ state, dispatch }: Props) {
           .filter(c => c.maxKw >= DCFC_MIN_KW && c.positionMi > state.positionMi)
           .sort((a, b) => a.positionMi - b.positionMi);
 
-        // Walk through stops, tracking simulated battery level
+        // Walk through stops; track battery and position incrementally
         let simBat = state.battery;
+        let simPos = state.positionMi;
         return dcChargers.map(c => {
-          const dist     = c.positionMi - state.positionMi;
+          const dist     = c.positionMi - simPos;          // distance from last stop (or current pos)
           const kwhNeed  = dist / effMiKwh;
           const arrBat   = simBat - kwhNeed;
           const arrPct   = arrBat / maxBat;
-          const reachable = arrBat > maxBat * 0.05; // flag below 5%
-          // Assume driver charges to 80% at each stop
+          const reachable = arrBat > maxBat * 0.05;
+          // Assume driver charges to 80% at each stop; advance sim position
           simBat = reachable ? Math.min(maxBat * 0.80, arrBat) : arrBat;
+          simPos = c.positionMi;
           const rate = Math.min(c.maxKw, car.maxChargeKw + chargeRateBonus);
           return { charger: c, dist, arrBat, arrPct, reachable, rate };
         });
