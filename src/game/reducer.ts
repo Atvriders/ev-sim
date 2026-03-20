@@ -2,7 +2,7 @@ import type { GameState, Action } from './types';
 import { getCar } from './cars';
 import { getUpgrade } from './upgrades';
 import { getRoute } from './routes';
-import { physicsTick, computeUpgradeStats } from './physics';
+import { physicsTick, computeUpgradeStats, computeKw } from './physics';
 import { loadGame } from './save';
 
 export const INITIAL_STATE: GameState = buildInitialState();
@@ -333,9 +333,11 @@ export function reducer(state: GameState, action: Action): GameState {
           }
         }
 
-        // Adjusted efficiency: upgrades reduce kW draw → more mi/kWh
-        const effMiKwh  = car.efficiencyMiKwh / efficiencyMult;
-        const safetyKwh = maxBat * 0.10;   // keep 10% buffer
+        // Use actual game-physics efficiency at 65 mph flat (more accurate than EPA rating)
+        // computeKw already applies upgrade efficiency multipliers internally
+        const cruiseKw  = computeKw(car, 65, 0, 0, state.upgrades);
+        const effMiKwh  = cruiseKw > 0 ? 65 / cruiseKw : car.efficiencyMiKwh / efficiencyMult;
+        const safetyKwh = maxBat * 0.05;   // 5% buffer
 
         const dcfcAhead = (route?.chargers ?? [])
           .filter(c => c.maxKw >= 50 && c.positionMi > newPos + 0.1 && c.id !== skipped)
